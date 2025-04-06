@@ -43,6 +43,7 @@ dependencies:
   google_fonts: ^6.2.1
   fluttertoast: ^8.2.12
   super_context_menu: ^0.8.24
+  logger: ^2.0.2+1
 
 
 dev_dependencies:

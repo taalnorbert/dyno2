@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:dyno2/speed_meter/Navbar/Button_navbar.dart';
+import 'package:dyno2/speed_meter/Navbar/button_navbar.dart';
 import '../../speedmeter.dart';
 import 'package:dyno2/login/login.dart';
 import '../../../services/auth_service.dart';
@@ -371,6 +371,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
     return Container(
       margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       decoration: BoxDecoration(
+        // ignore: deprecated_member_use
         color: index % 2 == 0 ? Colors.black.withOpacity(0.3) : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),
@@ -378,7 +379,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
       child: Row(
         children: [
           // Helyezés
-          Container(
+          SizedBox(
             width: 30,
             child: Text(
               "${index + 1}.",
@@ -416,7 +417,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
           ),
 
           // Idő
-          Container(
+          SizedBox(
             width: 70,
             child: Text(
               "${item['time']} ${_getTimeUnit()}",

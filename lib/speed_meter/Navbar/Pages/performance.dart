@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:math';
 import 'package:dyno2/login/login.dart';
-import 'package:dyno2/speed_meter/Navbar/Button_navbar.dart';
+import 'package:dyno2/speed_meter/Navbar/button_navbar.dart';
 import '../../../services/auth_service.dart';
 import '../../speedmeter.dart';
 import 'competitions.dart';
 import 'laptime.dart';
 
+// ignore: camel_case_types
 class dynoscreen extends StatefulWidget {
   const dynoscreen({super.key});
 
@@ -15,12 +16,14 @@ class dynoscreen extends StatefulWidget {
   State<dynoscreen> createState() => _dynoscreenState();
 }
 
+// ignore: camel_case_types
 class _dynoscreenState extends State<dynoscreen> {
   int _selectedIndex = 3;
   final TextEditingController weightController = TextEditingController();
   final TextEditingController rimSizeController = TextEditingController();
   final TextEditingController tireSizeController = TextEditingController();
-  final TextEditingController accelerationTimeController = TextEditingController();
+  final TextEditingController accelerationTimeController =
+      TextEditingController();
   final TextEditingController rpmAt100Controller = TextEditingController();
 
   // Új controller a fordulatszámhoz
@@ -36,9 +39,9 @@ class _dynoscreenState extends State<dynoscreen> {
 
   // Járműtípusok áttételi arányai (egyszerűsített)
   final Map<int, List<double>> _gearRatios = {
-    1: [3.91, 2.39, 1.55, 1.16, 0.85],  // Személyautó
-    2: [4.17, 2.64, 1.77, 1.27, 1.00],  // SUV/terepjáró
-    3: [5.05, 2.97, 1.94, 1.34, 1.00],  // Kisteherautó
+    1: [3.91, 2.39, 1.55, 1.16, 0.85], // Személyautó
+    2: [4.17, 2.64, 1.77, 1.27, 1.00], // SUV/terepjáró
+    3: [5.05, 2.97, 1.94, 1.34, 1.00], // Kisteherautó
   };
 
   void _onItemTapped(int index) {
@@ -46,45 +49,62 @@ class _dynoscreenState extends State<dynoscreen> {
       _selectedIndex = index;
     });
 
+    if (!mounted) return;
+
+    final navigator = Navigator.of(context);
     if (index == 0) {
-      Navigator.push(context, MaterialPageRoute(builder: (context) => const SpeedMeter()));
+      navigator
+          .push(MaterialPageRoute(builder: (context) => const SpeedMeter()));
     } else if (index == 1) {
-      Navigator.push(context, MaterialPageRoute(builder: (context) => const CompetitionsPage()));
+      navigator.push(
+          MaterialPageRoute(builder: (context) => const CompetitionsPage()));
     } else if (index == 2) {
-      Navigator.push(context, MaterialPageRoute(builder: (context) => const SpeedMeter()));
+      navigator
+          .push(MaterialPageRoute(builder: (context) => const SpeedMeter()));
     } else if (index == 3 || index == 4) {
       final user = AuthService().currentUser;
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+
       if (user == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
             content: Row(
               children: [
                 Icon(Icons.warning, color: Colors.white),
                 SizedBox(width: 10),
-                Text("Must be logged in!", style: TextStyle(color: Colors.white)),
+                Text("Must be logged in!",
+                    style: TextStyle(color: Colors.white)),
               ],
             ),
             backgroundColor: Colors.orange,
           ),
         );
-        Navigator.push(context, MaterialPageRoute(builder: (context) => Login()));
+        navigator.push(MaterialPageRoute(builder: (context) => Login()));
       } else {
         if (index == 3) {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const dynoscreen()));
+          navigator.push(
+              MaterialPageRoute(builder: (context) => const dynoscreen()));
         } else if (index == 4) {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LapTimeScreen()));
+          navigator.pushReplacement(
+              MaterialPageRoute(builder: (context) => const LapTimeScreen()));
         }
       }
     }
   }
 
   void _getSpeed() async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     try {
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      Position position = await Geolocator.getCurrentPosition(
+          // ignore: deprecated_member_use
+          desiredAccuracy: LocationAccuracy.high);
       DateTime now = DateTime.now();
 
+      if (!mounted) return;
+
       if (lastSpeedUpdate != null) {
-        double timeDiff = now.difference(lastSpeedUpdate!).inMilliseconds / 1000.0;
+        double timeDiff =
+            now.difference(lastSpeedUpdate!).inMilliseconds / 1000.0;
         if (timeDiff > 0) {
           acceleration = (position.speed - previousSpeed) / timeDiff;
         }
@@ -96,7 +116,8 @@ class _dynoscreenState extends State<dynoscreen> {
         lastSpeedUpdate = now;
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text("Hiba a sebesség lekérése során: $e"),
           backgroundColor: Colors.red,
@@ -122,9 +143,9 @@ class _dynoscreenState extends State<dynoscreen> {
     if (weightController.text.isNotEmpty &&
         accelerationTimeController.text.isNotEmpty &&
         rpmAt100Controller.text.isNotEmpty) {
-
       double weight = double.tryParse(weightController.text) ?? 0.0;
-      double accelerationTime = double.tryParse(accelerationTimeController.text) ?? 0.0;
+      double accelerationTime =
+          double.tryParse(accelerationTimeController.text) ?? 0.0;
       double rpmAt100 = double.tryParse(rpmAt100Controller.text) ?? 0.0;
 
       if (weight > 0 && accelerationTime > 0 && rpmAt100 > 0) {
@@ -138,7 +159,8 @@ class _dynoscreenState extends State<dynoscreen> {
         double wheelRadius = 0.33; // méter (kb. egy 16" kerék sugara)
 
         // Ha megadták a felni és kerék méretet, akkor használjuk azt
-        if (rimSizeController.text.isNotEmpty && tireSizeController.text.isNotEmpty) {
+        if (rimSizeController.text.isNotEmpty &&
+            tireSizeController.text.isNotEmpty) {
           double rimSize = double.tryParse(rimSizeController.text) ?? 0.0;
           double tireSize = double.tryParse(tireSizeController.text) ?? 0.0;
 
@@ -159,7 +181,8 @@ class _dynoscreenState extends State<dynoscreen> {
 
         // Az áttételi arány figyelembevétele
         final gearRatio = _gearRatios[vehicleType]![gearAt100 - 1];
-        final differentialRatio = vehicleType == 1 ? 3.45 : (vehicleType == 2 ? 3.73 : 4.10);
+        final differentialRatio =
+            vehicleType == 1 ? 3.45 : (vehicleType == 2 ? 3.73 : 4.10);
 
         // Becsült motor nyomaték
         double calculatedTorque = wheelTorque / (gearRatio * differentialRatio);
@@ -177,7 +200,8 @@ class _dynoscreenState extends State<dynoscreen> {
         double calculatedHorsepower = powerWatts / 735.5;
 
         // Korrekciós tényező a jármű típusa alapján
-        final correctionFactor = vehicleType == 1 ? 1.05 : (vehicleType == 2 ? 1.15 : 1.2);
+        final correctionFactor =
+            vehicleType == 1 ? 1.05 : (vehicleType == 2 ? 1.15 : 1.2);
         calculatedHorsepower = calculatedHorsepower * correctionFactor;
 
         setState(() {
@@ -202,7 +226,11 @@ class _dynoscreenState extends State<dynoscreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("1. Járműadatok", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+            Text("1. Járműadatok",
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18)),
             SizedBox(height: 10),
 
             // Jármű típus választás
@@ -217,10 +245,9 @@ class _dynoscreenState extends State<dynoscreen> {
                       vehicleType = value as int;
                     });
                   },
-                  fillColor: MaterialStateProperty.all(Colors.white),
+                  fillColor: WidgetStateProperty.all(Colors.white),
                 ),
                 Text('Személyautó', style: TextStyle(color: Colors.white)),
-
                 Radio(
                   value: 2,
                   groupValue: vehicleType,
@@ -229,7 +256,7 @@ class _dynoscreenState extends State<dynoscreen> {
                       vehicleType = value as int;
                     });
                   },
-                  fillColor: MaterialStateProperty.all(Colors.white),
+                  fillColor: WidgetStateProperty.all(Colors.white),
                 ),
                 Text('SUV/Terepjáró', style: TextStyle(color: Colors.white)),
               ],
@@ -244,7 +271,7 @@ class _dynoscreenState extends State<dynoscreen> {
                       vehicleType = value as int;
                     });
                   },
-                  fillColor: MaterialStateProperty.all(Colors.white),
+                  fillColor: WidgetStateProperty.all(Colors.white),
                 ),
                 Text('Kisteher', style: TextStyle(color: Colors.white)),
               ],
@@ -253,25 +280,38 @@ class _dynoscreenState extends State<dynoscreen> {
 
             TextField(
               controller: weightController,
-              decoration: InputDecoration(labelText: "Autó súlya (kg)", filled: true, fillColor: Colors.white),
+              decoration: InputDecoration(
+                  labelText: "Autó súlya (kg)",
+                  filled: true,
+                  fillColor: Colors.white),
               keyboardType: TextInputType.number,
             ),
             SizedBox(height: 10),
 
             TextField(
               controller: rimSizeController,
-              decoration: InputDecoration(labelText: "Felni mérete (col)", filled: true, fillColor: Colors.white),
+              decoration: InputDecoration(
+                  labelText: "Felni mérete (col)",
+                  filled: true,
+                  fillColor: Colors.white),
               keyboardType: TextInputType.number,
             ),
 
             TextField(
               controller: tireSizeController,
-              decoration: InputDecoration(labelText: "Kerék mérete (mm)", filled: true, fillColor: Colors.white),
+              decoration: InputDecoration(
+                  labelText: "Kerék mérete (mm)",
+                  filled: true,
+                  fillColor: Colors.white),
               keyboardType: TextInputType.number,
             ),
 
             SizedBox(height: 20),
-            Text("2. Mérési adatok", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+            Text("2. Mérési adatok",
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18)),
             SizedBox(height: 10),
 
             Row(
@@ -279,29 +319,37 @@ class _dynoscreenState extends State<dynoscreen> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: _getSpeed,
-                    child: Text("Élő sebesség mérése"),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
                     ),
+                    child: Text("Élő sebesség mérése"),
                   ),
                 ),
               ],
             ),
 
             SizedBox(height: 10),
-            Text("VAGY", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            Text("VAGY",
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
             SizedBox(height: 10),
 
             TextField(
               controller: accelerationTimeController,
-              decoration: InputDecoration(labelText: "Gyorsulási idő 0-100 km/h (mp)", filled: true, fillColor: Colors.white),
+              decoration: InputDecoration(
+                  labelText: "Gyorsulási idő 0-100 km/h (mp)",
+                  filled: true,
+                  fillColor: Colors.white),
               keyboardType: TextInputType.number,
             ),
 
             TextField(
               controller: rpmAt100Controller,
-              decoration: InputDecoration(labelText: "Fordulatszám 100 km/h-nál (RPM)", filled: true, fillColor: Colors.white),
+              decoration: InputDecoration(
+                  labelText: "Fordulatszám 100 km/h-nál (RPM)",
+                  filled: true,
+                  fillColor: Colors.white),
               keyboardType: TextInputType.number,
             ),
 
@@ -310,8 +358,7 @@ class _dynoscreenState extends State<dynoscreen> {
               decoration: InputDecoration(
                   labelText: 'Fokozat 100 km/h-nál',
                   filled: true,
-                  fillColor: Colors.white
-              ),
+                  fillColor: Colors.white),
               value: gearAt100,
               dropdownColor: Colors.white,
               items: [
@@ -343,7 +390,9 @@ class _dynoscreenState extends State<dynoscreen> {
                       backgroundColor: Colors.blue,
                       padding: EdgeInsets.symmetric(vertical: 15),
                     ),
-                    child: Text("TELJESÍTMÉNY KISZÁMÍTÁSA", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    child: Text("TELJESÍTMÉNY KISZÁMÍTÁSA",
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -361,23 +410,34 @@ class _dynoscreenState extends State<dynoscreen> {
               child: Column(
                 children: [
                   Text("MÉRÉSI EREDMÉNYEK",
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold)),
                   SizedBox(height: 15),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("LÓERŐ:", style: TextStyle(color: Colors.white, fontSize: 16)),
+                      Text("LÓERŐ:",
+                          style: TextStyle(color: Colors.white, fontSize: 16)),
                       Text("${horsepower.toStringAsFixed(1)} HP",
-                          style: TextStyle(color: Colors.green, fontSize: 20, fontWeight: FontWeight.bold)),
+                          style: TextStyle(
+                              color: Colors.green,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold)),
                     ],
                   ),
                   SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("NYOMATÉK:", style: TextStyle(color: Colors.white, fontSize: 16)),
+                      Text("NYOMATÉK:",
+                          style: TextStyle(color: Colors.white, fontSize: 16)),
                       Text("${torque.toStringAsFixed(1)} Nm",
-                          style: TextStyle(color: Colors.orange, fontSize: 20, fontWeight: FontWeight.bold)),
+                          style: TextStyle(
+                              color: Colors.orange,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ],

@@ -15,7 +15,7 @@ class BottomNavBar extends StatelessWidget {
   final Function(int) onItemTappedInternal;
 
   const BottomNavBar({
-    Key? key,
+    super.key,
     required this.selectedIndex,
     required this.onItemTapped,
     required this.currentSpeed,
@@ -23,7 +23,7 @@ class BottomNavBar extends StatelessWidget {
     required this.showMovementWarning,
     required this.showMovementTooHigh,
     required this.onItemTappedInternal,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

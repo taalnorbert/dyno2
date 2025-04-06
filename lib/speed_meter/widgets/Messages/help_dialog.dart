@@ -12,6 +12,7 @@ void showHelpDialog(BuildContext context) {
         backgroundColor: Colors.transparent,
         child: Container(
           decoration: BoxDecoration(
+            // ignore: deprecated_member_use
             color: Colors.black.withOpacity(0.7),
             borderRadius: BorderRadius.circular(16),
           ),

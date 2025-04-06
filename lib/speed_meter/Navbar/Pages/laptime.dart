@@ -6,7 +6,7 @@ import 'package:dyno2/speed_meter/Navbar/Pages/performance.dart';
 import '../../speedmeter.dart'; // Importáld a SpeedMeter oldalt
 import 'package:dyno2/login/login.dart'; // Importáld a Login oldalt
 import 'competitions.dart';
-import 'package:dyno2/speed_meter/Navbar/Button_navbar.dart'; // Importáld a BottomNavBar widgetet
+import 'package:dyno2/speed_meter/Navbar/button_navbar.dart'; // Importáld a BottomNavBar widgetet
 
 
 class LapTimeScreen extends StatefulWidget {

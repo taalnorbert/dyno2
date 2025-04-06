@@ -10,7 +10,7 @@ import 'profile_page.dart';
 import 'package:dyno2/login/login.dart';
 import 'widgets/Messages/result_dialog.dart';
 import 'widgets/Messages/help_dialog.dart';
-import 'Navbar/Button_navbar.dart';
+import 'Navbar/button_navbar.dart';
 
 class SpeedMeter extends StatefulWidget {
   const SpeedMeter({super.key});

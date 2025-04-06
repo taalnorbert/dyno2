@@ -11,11 +11,8 @@ class SpeedService {
   bool showWarningMessage = false;
   bool isTestButtonVisible = false;
   Timer? _speedIncreaseTimer;
-  DateTime? _startTime;
   Timer? _measurementTimer;
-  bool _waitingForSpeedToReachThreshold = false;
   StreamSubscription<Position>? _positionStreamSubscription;
-  int _measurementType = 0; // 0: 0-100, 1: 100-200
 
   // Initializing and permission checks
   Future<void> checkPermissionsAndStartListening() async {

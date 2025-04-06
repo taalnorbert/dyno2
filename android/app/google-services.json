@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "73090073685",
+    "project_id": "dyno-auth-01",
+    "storage_bucket": "dyno-auth-01.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:73090073685:android:868df94ed4bbe7e33940dc",
+        "android_client_info": {
+          "package_name": "com.example.dyno2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCeVaXZhMEjDO-bbFhiE_pFeBQizbxCnVY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

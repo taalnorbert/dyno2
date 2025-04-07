@@ -26,9 +26,15 @@ class AuthService {
   }
 
   Future<void> changePassword(String newPassword) async {
-    User? user = _auth.currentUser;
-    if (user != null) {
-      await user.updatePassword(newPassword);
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        await user.updatePassword(newPassword);
+      }
+    } catch (e) {
+      logger.e('Password change error:',
+          error: e, stackTrace: StackTrace.current);
+      rethrow;
     }
   }
 
@@ -112,5 +118,24 @@ class AuthService {
         builder: (BuildContext context) => Login(),
       ),
     );
+  }
+
+  Future<bool> verifyPassword(String password) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return false;
+
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: password,
+      );
+
+      await user.reauthenticateWithCredential(credential);
+      return true;
+    } catch (e) {
+      logger.e('Password verification error:',
+          error: e, stackTrace: StackTrace.current);
+      return false;
+    }
   }
 }

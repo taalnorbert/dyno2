@@ -1,4 +1,9 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 import '../login/login.dart';
 
@@ -11,6 +16,113 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  String? _nickname;
+  bool _isEditingNickname = false;
+  final _nicknameController = TextEditingController();
+  String? _profileImageUrl;
+  final _imagePicker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNickname();
+    _loadProfileImage();
+  }
+
+  @override
+  void dispose() {
+    _nicknameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadNickname() async {
+    final nickname = await AuthService().getNickname();
+    setState(() {
+      _nickname = nickname;
+    });
+  }
+
+  Future<void> _updateNickname(String newNickname) async {
+    try {
+      await AuthService().updateNickname(newNickname);
+      setState(() {
+        _nickname = newNickname;
+        _isEditingNickname = false;
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Becenév sikeresen módosítva!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Hiba történt: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _loadProfileImage() async {
+    final imageUrl = await AuthService().getProfileImageUrl();
+    setState(() {
+      _profileImageUrl = imageUrl;
+    });
+  }
+
+  Future<void> _updateProfileImage() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 300, // Kisebb méret
+        maxHeight: 300, // Kisebb méret
+        imageQuality: 70, // Alacsonyabb minőség a kisebb méret érdekében
+      );
+
+      if (image == null) return;
+
+      // Show loading indicator
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: Colors.blue),
+        ),
+      );
+
+      final imageFile = File(image.path);
+      final base64Image = await AuthService().uploadProfileImage(imageFile);
+
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading indicator
+
+      setState(() {
+        _profileImageUrl = base64Image;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profilkép sikeresen módosítva!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Hiba történt: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   void _showDeleteConfirmationDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -115,7 +227,7 @@ class _ProfilePageState extends State<ProfilePage> {
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
         bool isLoading = false;
-        
+
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {
             return PopScope(
@@ -215,7 +327,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     onPressed: isLoading
                         ? null
                         : () {
-                            isDialogActive = false; // Mark dialog as inactive before closing
+                            isDialogActive =
+                                false; // Mark dialog as inactive before closing
                             Navigator.of(dialogContext).pop();
                           },
                     child: Text(
@@ -301,7 +414,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                               // Check if dialog is still active before closing
                               if (!mounted || !isDialogActive) return;
-                              
+
                               isDialogActive = false; // Mark dialog as inactive
                               Navigator.of(dialogContext).pop();
 
@@ -316,7 +429,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               if (isDialogActive) {
                                 setState(() => isLoading = false);
                               }
-                              
+
                               if (!mounted || !isDialogActive) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
@@ -452,6 +565,123 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Widget _buildNicknameSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.person, color: Colors.blue),
+          const SizedBox(width: 10),
+          if (_isEditingNickname)
+            Expanded(
+              child: TextField(
+                controller: _nicknameController,
+                style: const TextStyle(color: Colors.white, fontSize: 18),
+                decoration: InputDecoration(
+                  hintText: 'Add meg a beceneved',
+                  hintStyle: TextStyle(color: Colors.grey[400]),
+                  border: InputBorder.none,
+                ),
+                onSubmitted: (value) {
+                  if (value.isNotEmpty) {
+                    _updateNickname(value);
+                  }
+                },
+              ),
+            )
+          else
+            Text(
+              _nickname ?? 'Nincs becenév',
+              style: const TextStyle(
+                fontSize: 18,
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          const SizedBox(width: 10),
+          IconButton(
+            icon: Icon(
+              _isEditingNickname ? Icons.check : Icons.edit,
+              color: Colors.blue,
+              size: 20,
+            ),
+            onPressed: () {
+              if (_isEditingNickname) {
+                if (_nicknameController.text.isNotEmpty) {
+                  _updateNickname(_nicknameController.text);
+                }
+              } else {
+                _nicknameController.text = _nickname ?? '';
+                setState(() {
+                  _isEditingNickname = true;
+                });
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileAvatar() {
+    return GestureDetector(
+      onTap: _updateProfileImage,
+      child: Stack(
+        children: [
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.blue, width: 2),
+              color: Colors.grey[900],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(50),
+              child: _profileImageUrl != null
+                  ? Image.memory(
+                      base64Decode(_profileImageUrl!),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.person,
+                        size: 50,
+                        color: Colors.blue,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.person,
+                      size: 50,
+                      color: Colors.blue,
+                    ),
+            ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.blue,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.black, width: 2),
+              ),
+              child: const Icon(
+                Icons.camera_alt,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -475,22 +705,11 @@ class _ProfilePageState extends State<ProfilePage> {
           child: Column(
             children: [
               const SizedBox(height: 20),
-              // Profile Avatar
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.blue, width: 2),
-                  color: Colors.grey[900],
-                ),
-                child: const Icon(
-                  Icons.person,
-                  size: 50,
-                  color: Colors.blue,
-                ),
-              ),
+              _buildProfileAvatar(), // Replace the existing Container with this
               const SizedBox(height: 20),
+              // Nickname Section
+              _buildNicknameSection(),
+              const SizedBox(height: 15),
               // Email Display
               Container(
                 padding: const EdgeInsets.all(16),

@@ -44,6 +44,8 @@ dependencies:
   fluttertoast: ^8.2.12
   super_context_menu: ^0.8.24
   logger: ^2.0.2+1
+  cloud_firestore: ^5.6.3
+  image_picker: ^1.0.7
 
 
 dev_dependencies:

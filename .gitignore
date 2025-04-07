@@ -23,15 +23,22 @@ migrate_working_dir/
 # is commented out by default.
 #.vscode/
 
-# Flutter/Dart/Pub related
+# Flutter/Dart specific
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
-/build/
+build/
+
+# Generated files
+**/*.g.dart
+**/GeneratedPluginRegistrant.*
+**/generated_plugin_registrant.*
+.dart_tool/flutter_build/
 
 # Symbolication related
 app.*.symbols
@@ -48,8 +55,6 @@ app.*.map.json
 lib/firebase_options.dart
 
 # FlutterFire configuration
-*_fingerprint.bin
-
-# Flutter auto-generated files
-**/GeneratedPluginRegistrant.*
-**/generated_plugin_registrant.*
+*fingerprint.bin
+configure.fingerprint.bin
+*.cache

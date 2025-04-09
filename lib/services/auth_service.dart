@@ -1,7 +1,7 @@
+import 'package:dyno2/speed_meter/Navbar/Pages/home.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:dyno2/speed_meter/speedmeter.dart';
 import 'package:logger/logger.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../login/login.dart';
@@ -55,7 +55,7 @@ class AuthService {
 
       navigator.pushReplacement(
         MaterialPageRoute(
-          builder: (BuildContext context) => const SpeedMeter(),
+          builder: (BuildContext context) => const HomePage(),
         ),
       );
     } on FirebaseAuthException catch (e) {
@@ -90,7 +90,7 @@ class AuthService {
 
       navigator.pushReplacement(
         MaterialPageRoute(
-          builder: (BuildContext context) => const SpeedMeter(),
+          builder: (BuildContext context) => const HomePage(),
         ),
       );
     } on FirebaseAuthException catch (e) {

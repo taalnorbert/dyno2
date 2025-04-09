@@ -18,7 +18,7 @@ class _HomePageState extends State<HomePage> {
   double currentSpeed = 0.0;
   bool isLocationServiceEnabled = true;
   StreamSubscription<Position>? _positionStreamSubscription;
-  bool isKmh = true; // Alapértelmezettként km/h-ban jelenik meg a sebesség
+  bool isKmh = true; // Default to km/h
 
   @override
   void initState() {
@@ -32,8 +32,6 @@ class _HomePageState extends State<HomePage> {
     _positionStreamSubscription?.cancel();
     super.dispose();
   }
-
-
 
   void _checkPermissionsAndStartListening() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -95,11 +93,102 @@ class _HomePageState extends State<HomePage> {
     return isKmh ? speed : speed * 0.621371192;
   }
 
-
-  
-
   void _showHelpDialog() {
     showHelpDialog(context);
+  }
+
+  void _showSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Colors.grey[900],
+              title: const Text(
+                'Beállítások',
+                style: TextStyle(color: Colors.white),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Speed unit setting
+                  ListTile(
+                    title: const Text(
+                      'Sebesség mértékegység',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    trailing: DropdownButton<bool>(
+                      dropdownColor: Colors.grey[850],
+                      value: isKmh,
+                      onChanged: (bool? newValue) {
+                        if (newValue != null) {
+                          setState(() {
+                            isKmh = newValue;
+                          });
+                          this.setState(() {
+                            isKmh = newValue;
+                          });
+                        }
+                      },
+                      items: const [
+                        DropdownMenuItem(
+                          value: true,
+                          child: Text('km/h',
+                              style: TextStyle(color: Colors.white)),
+                        ),
+                        DropdownMenuItem(
+                          value: false,
+                          child: Text('mph',
+                              style: TextStyle(color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Language button (inactive)
+                  ListTile(
+                    title: const Text(
+                      'Nyelv',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    trailing: TextButton(
+                      onPressed: null, // Disabled for now
+                      child: const Text(
+                        'Magyar',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  ),
+                  // Information button
+                  ListTile(
+                    title: const Text(
+                      'Információk',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.info_outline, color: Colors.blue),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showHelpDialog();
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Bezár',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -120,7 +209,9 @@ class _HomePageState extends State<HomePage> {
                         child: GestureDetector(
                           onTap: _toggleSpeedUnit,
                           child: CustomPaint(
-                            painter: MeterPainter(_getSpeedInCurrentUnit(currentSpeed), isKmh: isKmh),
+                            painter: MeterPainter(
+                                _getSpeedInCurrentUnit(currentSpeed),
+                                isKmh: isKmh),
                           ),
                         ),
                       ),
@@ -135,12 +226,18 @@ class _HomePageState extends State<HomePage> {
                       height: 40,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: AuthService().currentUser != null ? Colors.greenAccent : Colors.white, width: 2),
+                        border: Border.all(
+                            color: AuthService().currentUser != null
+                                ? Colors.greenAccent
+                                : Colors.white,
+                            width: 2),
                       ),
                       child: IconButton(
                         icon: Icon(
                           Icons.person,
-                          color: AuthService().currentUser != null ? Colors.greenAccent : Colors.white,
+                          color: AuthService().currentUser != null
+                              ? Colors.greenAccent
+                              : Colors.white,
                         ),
                         iconSize: 20,
                         onPressed: () async {
@@ -150,7 +247,8 @@ class _HomePageState extends State<HomePage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => ProfilePage(userEmail: userEmail),
+                                builder: (context) =>
+                                    ProfilePage(userEmail: userEmail),
                               ),
                             );
                           } else {
@@ -170,7 +268,7 @@ class _HomePageState extends State<HomePage> {
                     top: 30,
                     right: 0,
                     child: GestureDetector(
-                      onTap: _showHelpDialog,
+                      onTap: _showSettingsDialog,
                       child: Container(
                         width: 40,
                         height: 40,
@@ -180,7 +278,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         child: Center(
                           child: Icon(
-                            Icons.question_mark,
+                            Icons.settings,
                             size: 20,
                             color: Colors.white,
                           ),
@@ -224,7 +322,8 @@ class _HomePageState extends State<HomePage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),

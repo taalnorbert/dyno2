@@ -1,10 +1,10 @@
 import 'package:dyno2/signup/signup.dart';
 import 'package:dyno2/services/auth_service.dart';
+import 'package:dyno2/speed_meter/Navbar/Pages/home.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:dyno2/speed_meter/speedmeter.dart';
 
 class Login extends StatelessWidget {
   Login({super.key});
@@ -28,7 +28,7 @@ class Login extends StatelessWidget {
           );
         } else if (snapshot.hasData) {
           // Ha be van jelentkezve, navigálj a főoldalra
-          return SpeedMeter(); // Itt a SpeedMeter a főoldal
+          return HomePage(); // Itt a SpeedMeter a főoldal
         } else {
           // Ha nincs bejelentkezve, jelenítsd meg a bejelentkezési képernyőt
           return Scaffold(
@@ -200,11 +200,10 @@ class Login extends StatelessWidget {
             width: 150, // A jobb oldali rész szélessége
             child: GestureDetector(
               onTap: () {
-                // Navigálj a SpeedMeter oldalra
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (BuildContext context) => const SpeedMeter(),
+                    builder: (BuildContext context) => const HomePage(),
                   ),
                 );
               },

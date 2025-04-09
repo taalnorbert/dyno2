@@ -1,2 +1,0 @@
-C:/Users/36304/Desktop/flutter/dyno2/android/app/.cxx/Debug/193li4x5/armeabi-v7a/CMakeFiles/edit_cache.dir
-C:/Users/36304/Desktop/flutter/dyno2/android/app/.cxx/Debug/193li4x5/armeabi-v7a/CMakeFiles/rebuild_cache.dir

@@ -1,10 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:dyno2/speed_meter/Navbar/button_navbar.dart';
-import '../../speedmeter.dart';
-import 'package:dyno2/login/login.dart';
-import '../../../services/auth_service.dart';
-import 'laptime.dart';
-import 'performance.dart';
 
 class CompetitionsPage extends StatefulWidget {
   const CompetitionsPage({super.key});
@@ -14,7 +8,6 @@ class CompetitionsPage extends StatefulWidget {
 }
 
 class _CompetitionsPageState extends State<CompetitionsPage> {
-  int _selectedIndex = 1; // A CompetitionsPage indexe 1
   int _selectedLeaderboardType = 0; // 0: 0-100, 1: 100-200, 2: 1/4 mérföld
 
   // Példa adatok a leaderboardhoz
@@ -106,70 +99,6 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
 
   String _getTimeUnit() {
     return _selectedLeaderboardType == 2 ? "sec" : "mp";
-  }
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-
-    // Navigáció az egyes oldalak között
-    if (index == 0) {
-      // Mérés oldalra navigálás
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const SpeedMeter()),
-      );
-    } else if (index == 1) {
-      // Competitions oldalra navigálás (maradunk ugyanitt)
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const CompetitionsPage()),
-      );
-    } else if (index == 2) {
-      // Kezdőlapra navigálás
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const SpeedMeter()),
-      );
-    } else if (index == 3 || index == 4) {
-      // Teljesítmény vagy köridő oldalra navigálás (csak bejelentkezett felhasználóknak)
-      final user = AuthService().currentUser;
-      if (user == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.warning, color: Colors.white),
-                SizedBox(width: 10),
-                Text(
-                  "Must be logged in!",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => Login()),
-        );
-      } else {
-        // Ha be van jelentkezve, navigálj a megfelelő oldalra
-        if (index == 3) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const dynoscreen()),
-          );
-        } else if (index == 4) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const LapTimeScreen()),
-          );
-        }
-      }
-    }
   }
 
   @override
@@ -315,15 +244,6 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
             ),
           ),
         ],
-      ),
-      bottomNavigationBar: BottomNavBar(
-        selectedIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
-        currentSpeed: 0.0, // Nem használjuk a CompetitionsPage-en
-        isLocationServiceEnabled: true, // Nem használjuk a CompetitionsPage-en
-        showMovementWarning: () {}, // Nem használjuk a CompetitionsPage-en
-        showMovementTooHigh: () {}, // Nem használjuk a CompetitionsPage-en
-        onItemTappedInternal: _onItemTapped,
       ),
     );
   }

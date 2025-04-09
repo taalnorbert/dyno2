@@ -1,0 +1,303 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import '../../widgets/buttons/measurement_button.dart';
+import '../../meter_painter.dart';
+import '../../widgets/Messages/warning_message.dart';
+import '../../widgets/Messages/success_message.dart';
+import '../../widgets/Messages/result_dialog.dart';
+
+class HundredToTwoHundred extends StatefulWidget {
+  const HundredToTwoHundred({super.key});
+
+  @override
+  State<HundredToTwoHundred> createState() => _HundredToTwoHundredState();
+}
+
+class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
+  double currentSpeed = 0.0;
+  bool isLocationServiceEnabled = true;
+  bool isMeasurementActive = false;
+  bool isMeasurementStarted = false;
+  bool showMovementWarning = false;
+  bool showMovementTooHigh = false;
+  bool isTestButtonVisible = false;
+  Timer? _speedIncreaseTimer;
+  DateTime? _startTime;
+  Timer? _measurementTimer;
+  bool _waitingForSpeedToReachThreshold = false;
+  StreamSubscription<Position>? _positionStreamSubscription;
+  bool isKmh = true; // Alapértelmezettként km/h-ban jelenik meg a sebesség
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPermissionsAndStartListening();
+    _listenToLocationServiceStatus();
+    // Indítsa el automatikusan a mérést, amikor betöltődik az oldal
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startMeasurement();
+    });
+  }
+
+  void _checkPermissionsAndStartListening() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    setState(() {
+      isLocationServiceEnabled = serviceEnabled;
+    });
+
+    if (!serviceEnabled) {
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.deniedForever) {
+        return;
+      }
+    }
+
+    _positionStreamSubscription = Geolocator.getPositionStream(
+      locationSettings: AndroidSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        intervalDuration: const Duration(milliseconds: 100),
+        distanceFilter: 0,
+      ),
+    ).listen((Position position) {
+      _updateSpeed(position.speed);
+    });
+  }
+
+  void _toggleSpeedUnit() {
+    setState(() {
+      isKmh = !isKmh;
+    });
+  }
+
+  double _getSpeedInCurrentUnit(double speed) {
+    return isKmh ? speed : speed * 0.621371192;
+  }
+
+  void _updateSpeed(double speed) {
+    double newSpeed = speed * 3.6;
+    if (newSpeed != currentSpeed) {
+      setState(() {
+        currentSpeed = newSpeed;
+      });
+    }
+
+    // Csak akkor induljon el a mérés, ha a mérés aktív
+    if (isMeasurementActive && !_waitingForSpeedToReachThreshold && currentSpeed >= 103) {
+      _waitingForSpeedToReachThreshold = true;
+      _startMeasurementTimer();
+    }
+  }
+
+  void _listenToLocationServiceStatus() {
+    Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
+      bool isEnabled = status == ServiceStatus.enabled;
+      setState(() {
+        isLocationServiceEnabled = isEnabled;
+      });
+      if (isEnabled) {
+        _checkPermissionsAndStartListening();
+      }
+    });
+  }
+
+  void _startMeasurement() {
+    setState(() {
+      isMeasurementActive = true;
+      isMeasurementStarted = true;
+      isTestButtonVisible = true;
+      _waitingForSpeedToReachThreshold = false;
+    });
+
+    Future.delayed(Duration(seconds: 3), () {
+      setState(() {
+        isMeasurementStarted = false;
+      });
+    });
+  }
+
+  void _startMeasurementTimer() {
+    setState(() {
+      _startTime = DateTime.now();
+    });
+
+    _measurementTimer = Timer.periodic(Duration(milliseconds: 100), (Timer timer) {
+      if (currentSpeed >= 200) {
+        timer.cancel();
+        _finishMeasurement();
+      }
+    });
+  }
+
+  void _finishMeasurement() {
+    if (_startTime != null) {
+      final elapsedTime = DateTime.now().difference(_startTime!);
+      showResultAndReturnToHomePage(context, elapsedTime, 200, _resetMeasurement);
+    }
+  }
+
+  void _resetMeasurement() {
+    setState(() {
+      isMeasurementActive = false;
+      isMeasurementStarted = false;
+      isTestButtonVisible = false;
+      _waitingForSpeedToReachThreshold = false;
+      currentSpeed = 0.0;
+    });
+
+    _measurementTimer?.cancel();
+    _measurementTimer = null;
+    
+    // Opcionálisan visszatérés a Home oldalra
+    Navigator.pop(context);
+  }
+
+
+  void _startSpeedIncrease() {
+    // 100-200 mérésnél 100 km/h-tól indulunk
+    setState(() {
+      currentSpeed = 103.0;
+    });
+    
+    const double targetSpeed = 200.0;
+    const Duration interval = Duration(milliseconds: 100);
+
+    _speedIncreaseTimer = Timer.periodic(interval, (Timer timer) {
+      setState(() {
+        if (currentSpeed < targetSpeed) {
+          currentSpeed += 1.0;
+        } else {
+          timer.cancel();
+          _finishMeasurement();
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _speedIncreaseTimer?.cancel();
+    _measurementTimer?.cancel();
+    _positionStreamSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: isLocationServiceEnabled
+            ? Stack(
+                children: [
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      AnimatedContainer(
+                        duration: Duration(milliseconds: 300),
+                        width: MediaQuery.sizeOf(context).width * 1,
+                        height: MediaQuery.sizeOf(context).width * 1,
+                        child: GestureDetector(
+                          onTap: _toggleSpeedUnit,
+                          child: CustomPaint(
+                            painter: MeterPainter(_getSpeedInCurrentUnit(currentSpeed), isKmh: isKmh),
+                          ),
+                        ),
+                      ),
+                      if (isMeasurementActive) ...[
+                        NoOutlineMeasurementButton(
+                          onPressed: _resetMeasurement,
+                          text: "Mégse",
+                          backgroundColor: Colors.red,
+                        ),
+                        if (isTestButtonVisible)
+                          NoOutlineMeasurementButton(
+                            onPressed: _startSpeedIncrease,
+                            text: "Teszt Sebesség Növelés",
+                            backgroundColor: Colors.blue,
+                          ),
+                      ],
+                    ],
+                  ),
+                  if (isMeasurementStarted)
+                    SuccessMessage(
+                      message: "A mérés elkezdődött!",
+                      icon: Icons.check,
+                      color: Color(0xFF0ca644),
+                      iconColor: Color(0xFF84D65A),
+                    ),
+                  if (showMovementWarning)
+                    WarningMessage(
+                      message: "A jármű mozgásban van!",
+                      icon: Icons.warning,
+                      color: Colors.orange,
+                      iconColor: Colors.white,
+                    ),
+                  if (showMovementTooHigh)
+                    WarningMessage(
+                      message: "100 km/h-t meghaladod!",
+                      icon: Icons.warning,
+                      color: Colors.orange,
+                      iconColor: Colors.white,
+                    ),
+                ],
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.location_off,
+                    size: 60,
+                    color: Colors.red,
+                  ),
+                  SizedBox(height: 20),
+                  Text(
+                    "Location disabled",
+                    style: TextStyle(
+                      fontSize: 24,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    "To use the app, location services must be enabled in the settings.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  SizedBox(height: 30),
+                  ElevatedButton(
+                    onPressed: () {
+                      Geolocator.openLocationSettings();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      "Open Settings",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+

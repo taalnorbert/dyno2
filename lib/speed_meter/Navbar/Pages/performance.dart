@@ -1,12 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:math';
-import 'package:dyno2/login/login.dart';
-import 'package:dyno2/speed_meter/Navbar/button_navbar.dart';
-import '../../../services/auth_service.dart';
-import '../../speedmeter.dart';
-import 'competitions.dart';
-import 'laptime.dart';
 
 // ignore: camel_case_types
 class dynoscreen extends StatefulWidget {
@@ -18,7 +12,6 @@ class dynoscreen extends StatefulWidget {
 
 // ignore: camel_case_types
 class _dynoscreenState extends State<dynoscreen> {
-  int _selectedIndex = 3;
   final TextEditingController weightController = TextEditingController();
   final TextEditingController rimSizeController = TextEditingController();
   final TextEditingController tireSizeController = TextEditingController();
@@ -43,54 +36,6 @@ class _dynoscreenState extends State<dynoscreen> {
     2: [4.17, 2.64, 1.77, 1.27, 1.00], // SUV/terepjáró
     3: [5.05, 2.97, 1.94, 1.34, 1.00], // Kisteherautó
   };
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-
-    if (!mounted) return;
-
-    final navigator = Navigator.of(context);
-    if (index == 0) {
-      navigator
-          .push(MaterialPageRoute(builder: (context) => const SpeedMeter()));
-    } else if (index == 1) {
-      navigator.push(
-          MaterialPageRoute(builder: (context) => const CompetitionsPage()));
-    } else if (index == 2) {
-      navigator
-          .push(MaterialPageRoute(builder: (context) => const SpeedMeter()));
-    } else if (index == 3 || index == 4) {
-      final user = AuthService().currentUser;
-      final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-      if (user == null) {
-        scaffoldMessenger.showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.warning, color: Colors.white),
-                SizedBox(width: 10),
-                Text("Must be logged in!",
-                    style: TextStyle(color: Colors.white)),
-              ],
-            ),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        navigator.push(MaterialPageRoute(builder: (context) => Login()));
-      } else {
-        if (index == 3) {
-          navigator.push(
-              MaterialPageRoute(builder: (context) => const dynoscreen()));
-        } else if (index == 4) {
-          navigator.pushReplacement(
-              MaterialPageRoute(builder: (context) => const LapTimeScreen()));
-        }
-      }
-    }
-  }
 
   void _getSpeed() async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -445,15 +390,6 @@ class _dynoscreenState extends State<dynoscreen> {
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavBar(
-        selectedIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
-        currentSpeed: speed,
-        isLocationServiceEnabled: true,
-        showMovementWarning: () {},
-        showMovementTooHigh: () {},
-        onItemTappedInternal: _onItemTapped,
       ),
     );
   }

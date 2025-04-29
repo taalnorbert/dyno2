@@ -6,6 +6,7 @@ import '../../widgets/buttons/measurement_button.dart';
 import '../../widgets/Messages/warning_message.dart';
 import '../../widgets/Messages/success_message.dart';
 import '../../widgets/Messages/result_dialog.dart';
+import '../../../providers/speed_provider.dart'; // Import the SpeedProvider
 
 class ZeroToHundred extends StatefulWidget {
   const ZeroToHundred({super.key});
@@ -15,8 +16,9 @@ class ZeroToHundred extends StatefulWidget {
 }
 
 class _ZeroToHundredState extends State<ZeroToHundred> {
-  double currentSpeed = 0.0;
-  bool isLocationServiceEnabled = true;
+  // Use the SpeedProvider instance
+  final SpeedProvider _speedProvider = SpeedProvider();
+
   bool isMeasurementActive = false;
   bool isMeasurementStarted = false;
   bool showMovementWarning = false;
@@ -25,7 +27,6 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
   DateTime? _startTime;
   Timer? _measurementTimer;
   bool _waitingForSpeedToReachThreshold = false;
-  StreamSubscription<Position>? _positionStreamSubscription;
   bool isKmh = true; // Alapértelmezettként km/h-ban jelenik meg a sebesség
 
   @override
@@ -33,16 +34,37 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
     super.initState();
     _checkPermissionsAndStartListening();
     _listenToLocationServiceStatus();
+
+    // Add listener to SpeedProvider to get updates
+    _speedProvider.addListener(_onSpeedChanged);
+
     // Indítsa el automatikusan a mérést, amikor betöltődik az oldal
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startMeasurement();
     });
   }
 
+  void _onSpeedChanged() {
+    // This will be called whenever the speed changes in SpeedProvider
+
+    // Csak akkor induljon el a mérés, ha a mérés aktív
+    if (isMeasurementActive &&
+        !_waitingForSpeedToReachThreshold &&
+        _speedProvider.currentSpeed >= 3) {
+      _waitingForSpeedToReachThreshold = true;
+      _startMeasurementTimer();
+    }
+
+    // Force widget refresh
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   void _checkPermissionsAndStartListening() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     setState(() {
-      isLocationServiceEnabled = serviceEnabled;
+      _speedProvider.isLocationServiceEnabled = serviceEnabled;
     });
 
     if (!serviceEnabled) {
@@ -57,14 +79,19 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
       }
     }
 
-    _positionStreamSubscription = Geolocator.getPositionStream(
-      locationSettings: AndroidSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-        intervalDuration: const Duration(milliseconds: 100),
-        distanceFilter: 0,
-      ),
-    ).listen((Position position) {
-      _updateSpeed(position.speed);
+    // Start tracking speed from the SpeedProvider
+    _speedProvider.startSpeedTracking();
+  }
+
+  void _listenToLocationServiceStatus() {
+    Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
+      bool isEnabled = status == ServiceStatus.enabled;
+      setState(() {
+        _speedProvider.isLocationServiceEnabled = isEnabled;
+      });
+      if (isEnabled) {
+        _checkPermissionsAndStartListening();
+      }
     });
   }
 
@@ -76,33 +103,6 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
 
   double _getSpeedInCurrentUnit(double speed) {
     return isKmh ? speed : speed * 0.621371192;
-  }
-
-  void _updateSpeed(double speed) {
-    double newSpeed = speed * 3.6;
-    if (newSpeed != currentSpeed) {
-      setState(() {
-        currentSpeed = newSpeed;
-      });
-    }
-
-    // Csak akkor induljon el a mérés, ha a mérés aktív
-    if (isMeasurementActive && !_waitingForSpeedToReachThreshold && currentSpeed >= 3) {
-      _waitingForSpeedToReachThreshold = true;
-      _startMeasurementTimer();
-    }
-  }
-
-  void _listenToLocationServiceStatus() {
-    Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
-      bool isEnabled = status == ServiceStatus.enabled;
-      setState(() {
-        isLocationServiceEnabled = isEnabled;
-      });
-      if (isEnabled) {
-        _checkPermissionsAndStartListening();
-      }
-    });
   }
 
   void _startMeasurement() {
@@ -125,8 +125,9 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
       _startTime = DateTime.now();
     });
 
-    _measurementTimer = Timer.periodic(Duration(milliseconds: 100), (Timer timer) {
-      if (currentSpeed >= 100) {
+    _measurementTimer =
+        Timer.periodic(Duration(milliseconds: 100), (Timer timer) {
+      if (_speedProvider.currentSpeed >= 100) {
         timer.cancel();
         _finishMeasurement();
       }
@@ -136,7 +137,8 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
   void _finishMeasurement() {
     if (_startTime != null) {
       final elapsedTime = DateTime.now().difference(_startTime!);
-      showResultAndReturnToHomePage(context, elapsedTime, 100, _resetMeasurement);
+      showResultAndReturnToHomePage(
+          context, elapsedTime, 100, _resetMeasurement);
     }
   }
 
@@ -146,39 +148,36 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
       isMeasurementStarted = false;
       isTestButtonVisible = false;
       _waitingForSpeedToReachThreshold = false;
-      currentSpeed = 0.0;
     });
 
     _measurementTimer?.cancel();
     _measurementTimer = null;
-    
+
     // Opcionálisan visszatérés a Home oldalra
     Navigator.pop(context);
   }
-
 
   void _startSpeedIncrease() {
     const double targetSpeed = 100.0;
     const Duration interval = Duration(milliseconds: 100);
 
     _speedIncreaseTimer = Timer.periodic(interval, (Timer timer) {
-      setState(() {
-        if (currentSpeed < targetSpeed) {
-          currentSpeed += 1.0;
-        } else {
-          timer.cancel();
-          _finishMeasurement();
-        }
-      });
+      // Update the speed in SpeedProvider for testing purposes
+      _speedProvider
+          .updateSpeed((_speedProvider.currentSpeed / 3.6) + (1.0 / 3.6));
+
+      if (_speedProvider.currentSpeed >= targetSpeed) {
+        timer.cancel();
+        _finishMeasurement();
+      }
     });
   }
-
 
   @override
   void dispose() {
     _speedIncreaseTimer?.cancel();
     _measurementTimer?.cancel();
-    _positionStreamSubscription?.cancel();
+    _speedProvider.removeListener(_onSpeedChanged);
     super.dispose();
   }
 
@@ -187,7 +186,7 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
-        child: isLocationServiceEnabled
+        child: _speedProvider.isLocationServiceEnabled
             ? Stack(
                 children: [
                   Column(
@@ -200,7 +199,10 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
                         child: GestureDetector(
                           onTap: _toggleSpeedUnit,
                           child: CustomPaint(
-                            painter: MeterPainter(_getSpeedInCurrentUnit(currentSpeed), isKmh: isKmh),
+                            painter: MeterPainter(
+                                _getSpeedInCurrentUnit(
+                                    _speedProvider.currentSpeed),
+                                isKmh: isKmh),
                           ),
                         ),
                       ),
@@ -269,7 +271,8 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -288,5 +291,3 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
     );
   }
 }
-
-// Removed redundant _finishMeasurement function as it duplicates functionality already implemented in the _ZeroToHundredState class.

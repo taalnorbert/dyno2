@@ -12,6 +12,7 @@ import 'package:dyno2/speed_meter/Navbar/Pages/laptime.dart';
 import 'package:dyno2/speed_meter/Navbar/Pages/zero_to_hundred.dart';
 import 'package:dyno2/speed_meter/Navbar/Pages/hundred_to_twohundred.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:dyno2/providers/speed_provider.dart';
 import 'dart:async';
 
 void main() async {
@@ -75,6 +76,8 @@ class AuthWrapper extends StatelessWidget {
     );
   }
 }
+
+final SpeedProvider _speedProvider = SpeedProvider();
 
 class MainView extends StatefulWidget {
   const MainView({super.key});
@@ -145,10 +148,9 @@ class MainViewState extends State<MainView> {
                   '0-100',
                   style: TextStyle(color: Colors.white),
                 ),
-                onTap: () async {
-                  Navigator.pop(dialogContext); // Close dialog first
-
-                  if (currentSpeed > 5) {
+                onTap: () {
+                  Navigator.pop(dialogContext);
+                  if (_speedProvider.currentSpeed > 5.0) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content:
@@ -156,15 +158,13 @@ class MainViewState extends State<MainView> {
                         backgroundColor: Colors.orange,
                       ),
                     );
-                    return;
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const ZeroToHundred()),
+                    );
                   }
-
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ZeroToHundred(),
-                    ),
-                  );
                 },
               ),
               ListTile(
@@ -173,27 +173,25 @@ class MainViewState extends State<MainView> {
                   '100-200',
                   style: TextStyle(color: Colors.white),
                 ),
-                onTap: () async {
-                  Navigator.pop(dialogContext); // Close dialog first
-
-                  if (currentSpeed < 95 || currentSpeed > 105) {
+                onTap: () {
+                  Navigator.pop(dialogContext);
+                  if (_speedProvider.currentSpeed < 95 ||
+                      _speedProvider.currentSpeed > 105) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(currentSpeed < 95
+                        content: Text(_speedProvider.currentSpeed < 95
                             ? 'A sebesség túl alacsony! A méréshez érj el 100 km/h-t!'
                             : 'A sebesség túl magas! A méréshez lassíts 100 km/h-ra!'),
                         backgroundColor: Colors.red,
                       ),
                     );
-                    return;
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const HundredToTwoHundred()),
+                    );
                   }
-
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const HundredToTwoHundred(),
-                    ),
-                  );
                 },
               ),
             ],

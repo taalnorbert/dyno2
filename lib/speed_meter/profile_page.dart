@@ -78,14 +78,13 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 300, // Kisebb méret
-        maxHeight: 300, // Kisebb méret
-        imageQuality: 70, // Alacsonyabb minőség a kisebb méret érdekében
+        maxWidth: 300, 
+        maxHeight: 300, 
+        imageQuality: 70, 
       );
 
       if (image == null) return;
 
-      // Show loading indicator
       if (!mounted) return;
       showDialog(
         context: context,
@@ -99,7 +98,7 @@ class _ProfilePageState extends State<ProfilePage> {
       final base64Image = await AuthService().uploadProfileImage(imageFile);
 
       if (!mounted) return;
-      Navigator.pop(context); // Close loading indicator
+      Navigator.pop(context); 
 
       setState(() {
         _profileImageUrl = base64Image;
@@ -113,7 +112,7 @@ class _ProfilePageState extends State<ProfilePage> {
       );
     } catch (e) {
       if (!mounted) return;
-      Navigator.pop(context); // Close loading indicator
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Hiba történt: ${e.toString()}'),
@@ -173,8 +172,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   await AuthService().deleteAccount();
 
                   if (!dialogContext.mounted) return;
-                  Navigator.pop(dialogContext); // Close loading
-                  Navigator.pop(dialogContext); // Close dialog
+                  Navigator.pop(dialogContext); 
+                  Navigator.pop(dialogContext); 
 
                   if (!mounted) return;
                   Navigator.pushReplacement(
@@ -183,7 +182,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   );
                 } catch (e) {
                   if (!dialogContext.mounted) return;
-                  Navigator.pop(dialogContext); // Close loading
+                  Navigator.pop(dialogContext);
 
                   if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(

@@ -6,6 +6,7 @@ import '../../../services/auth_service.dart';
 import '../../profile_page.dart';
 import 'package:dyno2/login/login.dart';
 import '../../widgets/Messages/help_dialog.dart';
+import '../../../providers/speed_provider.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -15,70 +16,68 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  double currentSpeed = 0.0;
-  bool isLocationServiceEnabled = true;
-  StreamSubscription<Position>? _positionStreamSubscription;
-  bool isKmh = true; // Default to km/h
+  final SpeedProvider _speedProvider = SpeedProvider();
+  bool isKmh = true;
+  StreamSubscription<ServiceStatus>? _serviceStatusSubscription;
 
   @override
   void initState() {
     super.initState();
     _checkPermissionsAndStartListening();
     _listenToLocationServiceStatus();
+    
+    // Add listener to get notified when speed changes
+    _speedProvider.addListener(_onSpeedChanged);
+  }
+
+  void _onSpeedChanged() {
+    // Force rebuild when speed changes
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
-    _positionStreamSubscription?.cancel();
+    // Cancel the location service status subscription
+    _serviceStatusSubscription?.cancel();
+    
+    // Remove listener when widget is disposed
+    _speedProvider.removeListener(_onSpeedChanged);
+    // Note: Do not call _speedProvider.dispose() here as it might be used by other widgets
+    // We'll only remove our listener to avoid memory leaks
     super.dispose();
   }
 
   void _checkPermissionsAndStartListening() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    setState(() {
-      isLocationServiceEnabled = serviceEnabled;
-    });
-
-    if (!serviceEnabled) {
-      return;
+    if (mounted) {  // Check if the widget is still mounted
+      setState(() {
+        _speedProvider.isLocationServiceEnabled = serviceEnabled;
+      });
     }
+
+    if (!serviceEnabled || !mounted) return;
 
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.deniedForever) {
-        return;
-      }
+      if (permission == LocationPermission.deniedForever || !mounted) return;
     }
 
-    _positionStreamSubscription = Geolocator.getPositionStream(
-      locationSettings: AndroidSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-        intervalDuration: const Duration(milliseconds: 100),
-        distanceFilter: 0,
-      ),
-    ).listen((Position position) {
-      _updateSpeed(position.speed);
-    });
-  }
-
-  void _updateSpeed(double speed) {
-    double newSpeed = speed * 3.6;
-    if (newSpeed != currentSpeed) {
-      setState(() {
-        currentSpeed = newSpeed;
-      });
-    }
+    _speedProvider.startSpeedTracking();
   }
 
   void _listenToLocationServiceStatus() {
-    Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
+    _serviceStatusSubscription = Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
       bool isEnabled = status == ServiceStatus.enabled;
-      setState(() {
-        isLocationServiceEnabled = isEnabled;
-      });
-      if (isEnabled) {
-        _checkPermissionsAndStartListening();
+      if (mounted) {  // Check if the widget is still mounted
+        setState(() {
+          _speedProvider.isLocationServiceEnabled = isEnabled;
+        });
+        if (isEnabled) {
+          _checkPermissionsAndStartListening();
+        }
       }
     });
   }
@@ -126,9 +125,11 @@ class _HomePageState extends State<HomePage> {
                           setState(() {
                             isKmh = newValue;
                           });
-                          this.setState(() {
-                            isKmh = newValue;
-                          });
+                          if (mounted) {  // Check if the parent widget is still mounted
+                            this.setState(() {
+                              isKmh = newValue;
+                            });
+                          }
                         }
                       },
                       items: const [
@@ -196,7 +197,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
-        child: isLocationServiceEnabled
+        child: _speedProvider.isLocationServiceEnabled
             ? Stack(
                 children: [
                   Column(
@@ -210,7 +211,8 @@ class _HomePageState extends State<HomePage> {
                           onTap: _toggleSpeedUnit,
                           child: CustomPaint(
                             painter: MeterPainter(
-                                _getSpeedInCurrentUnit(currentSpeed),
+                                _getSpeedInCurrentUnit(
+                                    _speedProvider.currentSpeed),
                                 isKmh: isKmh),
                           ),
                         ),

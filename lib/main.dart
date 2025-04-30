@@ -179,9 +179,14 @@ class MainViewState extends State<MainView> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Scaffold(
+    return ListenableBuilder(
+      listenable: _speedProvider,
+      builder: (context, _) {
+        if (!_speedProvider.isLocationServiceEnabled) {
+          return const LocationDisabledScreen();
+        }
+
+        return Scaffold(
           bottomNavigationBar: NavigationBar(
             backgroundColor: Colors.black,
             indicatorColor: Colors.transparent,
@@ -263,16 +268,8 @@ class MainViewState extends State<MainView> {
               const LapTimeScreen(),
             ],
           ),
-        ),
-        // Add LocationDisabledScreen overlay when location is disabled
-        if (!_speedProvider.isLocationServiceEnabled)
-          const Positioned.fill(
-            child: Material(
-              color: Colors.black,
-              child: LocationDisabledScreen(),
-            ),
-          ),
-      ],
+        );
+      },
     );
   }
 

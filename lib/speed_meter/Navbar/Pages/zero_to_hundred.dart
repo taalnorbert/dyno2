@@ -137,7 +137,8 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
   }
 
   void _finishMeasurement() {
-    if (_startTime != null) {
+    if (_startTime != null && mounted) {
+      // Add mounted check here
       final elapsedTime = DateTime.now().difference(_startTime!);
       showResultAndReturnToHomePage(
           context, elapsedTime, 100, _resetMeasurement);
@@ -145,6 +146,8 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
   }
 
   void _resetMeasurement() {
+    if (!mounted) return; // Add early return if not mounted
+
     setState(() {
       isMeasurementActive = false;
       isMeasurementStarted = false;
@@ -155,8 +158,10 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
     _measurementTimer?.cancel();
     _measurementTimer = null;
 
-    // Opcionálisan visszatérés a Home oldalra
-    Navigator.pop(context);
+    // Only navigate if still mounted
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 
   void _startSpeedIncrease() {

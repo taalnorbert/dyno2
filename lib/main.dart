@@ -13,6 +13,17 @@ import 'package:dyno2/speed_meter/Navbar/Pages/zero_to_hundred.dart';
 import 'package:dyno2/speed_meter/Navbar/Pages/hundred_to_twohundred.dart';
 import 'package:dyno2/providers/speed_provider.dart';
 import 'package:dyno2/speed_meter/widgets/location_disabled_screen.dart';
+import 'package:dyno2/speed_meter/widgets/Messages/warning_message.dart';
+
+// Alkalmazás szövegek konstansai
+class AppStrings {
+  static const String lowSpeedWarningMessage = "Legalább 95km/h haladj!";
+  static const String movingWarningMessage = "Mozgásban vagy!";
+  static const String noGpsWarningMessage = 'Nincs GPS jel!';
+  static const String chooseMeasurementTitle = 'Válassz mérést';
+  static const String zeroToHundredLabel = '0-100';
+  static const String hundredToTwoHundredLabel = '100-200';
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -90,14 +101,46 @@ class MainViewState extends State<MainView> {
   final PageController pageController = PageController(initialPage: 2);
   final SpeedProvider _speedProvider = SpeedProvider();
 
+  // Add these properties
+  bool showLowSpeedWarning = false;
+  bool showHighSpeedWarning = false;
+  bool showGpsWarning = false;
+
   void _showNoGpsWarning() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Nincs GPS jel! Várj a jel megszerzésére.'),
-        backgroundColor: Colors.orange,
-        duration: Duration(seconds: 2),
-      ),
-    );
+    setState(() {
+      showGpsWarning = true;
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            showGpsWarning = false;
+          });
+        }
+      });
+    });
+  }
+
+  void _showWarningMessage(String type) {
+    setState(() {
+      if (type == 'low') {
+        showLowSpeedWarning = true;
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            setState(() {
+              showLowSpeedWarning = false;
+            });
+          }
+        });
+      } else if (type == 'high') {
+        showHighSpeedWarning = true;
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            setState(() {
+              showHighSpeedWarning = false;
+            });
+          }
+        });
+      }
+    });
   }
 
   void _showMeasurementDialog() {
@@ -111,29 +154,23 @@ class MainViewState extends State<MainView> {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           backgroundColor: Colors.grey[900],
-          title: const Text(
-            'Válassz mérést',
-            style: TextStyle(color: Colors.white),
+          title: Text(
+            AppStrings.chooseMeasurementTitle,
+            style: const TextStyle(color: Colors.white),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
                 leading: const Icon(Icons.speed_outlined, color: Colors.white),
-                title: const Text(
-                  '0-100',
-                  style: TextStyle(color: Colors.white),
+                title: Text(
+                  AppStrings.zeroToHundredLabel,
+                  style: const TextStyle(color: Colors.white),
                 ),
                 onTap: () {
                   Navigator.pop(dialogContext);
                   if (_speedProvider.currentSpeed > 5.0) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text('A jármű mozgásban van! A méréshez állj meg!'),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
+                    _showWarningMessage('high');
                   } else {
                     Navigator.push(
                       context,
@@ -145,22 +182,16 @@ class MainViewState extends State<MainView> {
               ),
               ListTile(
                 leading: const Icon(Icons.timer_outlined, color: Colors.white),
-                title: const Text(
-                  '100-200',
-                  style: TextStyle(color: Colors.white),
+                title: Text(
+                  AppStrings.hundredToTwoHundredLabel,
+                  style: const TextStyle(color: Colors.white),
                 ),
                 onTap: () {
                   Navigator.pop(dialogContext);
-                  if (_speedProvider.currentSpeed < 95 ||
-                      _speedProvider.currentSpeed > 105) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(_speedProvider.currentSpeed < 95
-                            ? 'A sebesség túl alacsony! A méréshez érj el 100 km/h-t!'
-                            : 'A sebesség túl magas! A méréshez lassíts 100 km/h-ra!'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
+                  if (_speedProvider.currentSpeed < 95) {
+                    _showWarningMessage('low');
+                  } else if (_speedProvider.currentSpeed > 105) {
+                    _showWarningMessage('high');
                   } else {
                     Navigator.push(
                       context,
@@ -186,88 +217,117 @@ class MainViewState extends State<MainView> {
           return const LocationDisabledScreen();
         }
 
-        return Scaffold(
-          bottomNavigationBar: NavigationBar(
-            backgroundColor: Colors.black,
-            indicatorColor: Colors.transparent,
-            destinations: [
-              NavigationDestination(
-                icon: Icon(
-                  Icons.speed_outlined,
-                  color: bottomNavigationIndex == 0
-                      ? Colors.redAccent
-                      : Colors.grey,
-                ),
-                label: 'Measure',
-              ),
-              NavigationDestination(
-                icon: Icon(
-                  Icons.leaderboard,
-                  color: bottomNavigationIndex == 1
-                      ? Colors.redAccent
-                      : Colors.grey,
-                ),
-                label: 'Verseny',
-              ),
-              NavigationDestination(
-                icon: Icon(
-                  Icons.home,
-                  color: bottomNavigationIndex == 2
-                      ? Colors.redAccent
-                      : Colors.grey,
-                ),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Icon(
-                  Icons.speed,
-                  color: bottomNavigationIndex == 3
-                      ? Colors.redAccent
-                      : Colors.grey,
-                ),
-                label: 'Dyno',
-              ),
-              NavigationDestination(
-                icon: Icon(
-                  Icons.timer,
-                  color: bottomNavigationIndex == 4
-                      ? Colors.redAccent
-                      : Colors.grey,
-                ),
-                label: 'Laptime',
-              ),
-            ],
-            selectedIndex: bottomNavigationIndex,
-            height: 80,
-            labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-            onDestinationSelected: (index) {
-              if (!_speedProvider.hasGpsSignal &&
-                  (index == 0 || index == 3 || index == 4)) {
-                _showNoGpsWarning();
-                return;
-              }
+        return Stack(
+          children: [
+            Scaffold(
+              bottomNavigationBar: NavigationBar(
+                backgroundColor: Colors.black,
+                indicatorColor: Colors.transparent,
+                destinations: [
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.speed_outlined,
+                      color: bottomNavigationIndex == 0
+                          ? Colors.redAccent
+                          : Colors.grey,
+                    ),
+                    label: 'Measure',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.leaderboard,
+                      color: bottomNavigationIndex == 1
+                          ? Colors.redAccent
+                          : Colors.grey,
+                    ),
+                    label: 'Verseny',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.home,
+                      color: bottomNavigationIndex == 2
+                          ? Colors.redAccent
+                          : Colors.grey,
+                    ),
+                    label: 'Home',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.speed,
+                      color: bottomNavigationIndex == 3
+                          ? Colors.redAccent
+                          : Colors.grey,
+                    ),
+                    label: 'Dyno',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.timer,
+                      color: bottomNavigationIndex == 4
+                          ? Colors.redAccent
+                          : Colors.grey,
+                    ),
+                    label: 'Laptime',
+                  ),
+                ],
+                selectedIndex: bottomNavigationIndex,
+                height: 80,
+                labelBehavior:
+                    NavigationDestinationLabelBehavior.onlyShowSelected,
+                onDestinationSelected: (index) {
+                  if (!_speedProvider.hasGpsSignal &&
+                      (index == 0 || index == 3 || index == 4)) {
+                    _showNoGpsWarning();
+                    return;
+                  }
 
-              if (index != 0) {
-                pageController.jumpToPage(index);
-                setState(() {
-                  bottomNavigationIndex = index;
-                });
-              } else {
-                _showMeasurementDialog();
-              }
-            },
-          ),
-          body: PageView(
-            controller: pageController,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              const HomePage(),
-              const CompetitionsPage(),
-              const HomePage(),
-              const dynoscreen(),
-              const LapTimeScreen(),
-            ],
-          ),
+                  if (index != 0) {
+                    pageController.jumpToPage(index);
+                    setState(() {
+                      bottomNavigationIndex = index;
+                    });
+                  } else {
+                    _showMeasurementDialog();
+                  }
+                },
+              ),
+              body: PageView(
+                controller: pageController,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  const HomePage(),
+                  const CompetitionsPage(),
+                  const HomePage(),
+                  const dynoscreen(),
+                  const LapTimeScreen(),
+                ],
+              ),
+            ),
+            if (showGpsWarning)
+              const WarningMessage(
+                key: Key('gpsWarning'),
+                message: AppStrings.noGpsWarningMessage,
+                icon: Icons.gps_off,
+                color: Colors.orange,
+                iconColor: Colors.white,
+              ),
+            if (showLowSpeedWarning)
+              WarningMessage(
+                key: const Key('lowSpeedWarning'),
+                message: AppStrings.lowSpeedWarningMessage,
+                icon: Icons.warning,
+                color: Colors.red,
+                iconColor: Colors.white,
+              ),
+            if (showHighSpeedWarning)
+              WarningMessage(
+                key: const Key('highSpeedWarning'),
+                message: AppStrings.movingWarningMessage,
+                icon: Icons.warning,
+                color: Colors.red,
+                iconColor: Colors.white,
+              ),
+          ],
         );
       },
     );

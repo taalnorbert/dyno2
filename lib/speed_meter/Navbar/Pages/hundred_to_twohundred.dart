@@ -6,6 +6,7 @@ import '../../meter_painter.dart';
 import '../../widgets/Messages/warning_message.dart';
 import '../../widgets/Messages/success_message.dart';
 import '../../widgets/Messages/result_dialog.dart';
+import '../../widgets/location_disabled_screen.dart';
 
 class HundredToTwoHundred extends StatefulWidget {
   const HundredToTwoHundred({super.key});
@@ -88,7 +89,9 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
     }
 
     // Csak akkor induljon el a mérés, ha a mérés aktív
-    if (isMeasurementActive && !_waitingForSpeedToReachThreshold && currentSpeed >= 103) {
+    if (isMeasurementActive &&
+        !_waitingForSpeedToReachThreshold &&
+        currentSpeed >= 103) {
       _waitingForSpeedToReachThreshold = true;
       _startMeasurementTimer();
     }
@@ -126,7 +129,8 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
       _startTime = DateTime.now();
     });
 
-    _measurementTimer = Timer.periodic(Duration(milliseconds: 100), (Timer timer) {
+    _measurementTimer =
+        Timer.periodic(Duration(milliseconds: 100), (Timer timer) {
       if (currentSpeed >= 200) {
         timer.cancel();
         _finishMeasurement();
@@ -137,7 +141,8 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
   void _finishMeasurement() {
     if (_startTime != null) {
       final elapsedTime = DateTime.now().difference(_startTime!);
-      showResultAndReturnToHomePage(context, elapsedTime, 200, _resetMeasurement);
+      showResultAndReturnToHomePage(
+          context, elapsedTime, 200, _resetMeasurement);
     }
   }
 
@@ -152,18 +157,17 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
 
     _measurementTimer?.cancel();
     _measurementTimer = null;
-    
+
     // Opcionálisan visszatérés a Home oldalra
     Navigator.pop(context);
   }
-
 
   void _startSpeedIncrease() {
     // 100-200 mérésnél 100 km/h-tól indulunk
     setState(() {
       currentSpeed = 103.0;
     });
-    
+
     const double targetSpeed = 200.0;
     const Duration interval = Duration(milliseconds: 100);
 
@@ -205,7 +209,9 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
                         child: GestureDetector(
                           onTap: _toggleSpeedUnit,
                           child: CustomPaint(
-                            painter: MeterPainter(_getSpeedInCurrentUnit(currentSpeed), isKmh: isKmh),
+                            painter: MeterPainter(
+                                _getSpeedInCurrentUnit(currentSpeed),
+                                isKmh: isKmh),
                           ),
                         ),
                       ),
@@ -247,57 +253,8 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
                     ),
                 ],
               )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.location_off,
-                    size: 60,
-                    color: Colors.red,
-                  ),
-                  SizedBox(height: 20),
-                  Text(
-                    "Location disabled",
-                    style: TextStyle(
-                      fontSize: 24,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    "To use the app, location services must be enabled in the settings.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white70,
-                    ),
-                  ),
-                  SizedBox(height: 30),
-                  ElevatedButton(
-                    onPressed: () {
-                      Geolocator.openLocationSettings();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: Text(
-                      "Open Settings",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            : const LocationDisabledScreen(),
       ),
     );
   }
 }
-

@@ -7,6 +7,7 @@ import '../../profile_page.dart';
 import 'package:dyno2/login/login.dart';
 import '../../widgets/Messages/help_dialog.dart';
 import '../../../providers/speed_provider.dart';
+import '../../widgets/location_disabled_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -25,7 +26,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _checkPermissionsAndStartListening();
     _listenToLocationServiceStatus();
-    
+
     // Add listener to get notified when speed changes
     _speedProvider.addListener(_onSpeedChanged);
   }
@@ -41,7 +42,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     // Cancel the location service status subscription
     _serviceStatusSubscription?.cancel();
-    
+
     // Remove listener when widget is disposed
     _speedProvider.removeListener(_onSpeedChanged);
     // Note: Do not call _speedProvider.dispose() here as it might be used by other widgets
@@ -51,7 +52,8 @@ class _HomePageState extends State<HomePage> {
 
   void _checkPermissionsAndStartListening() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (mounted) {  // Check if the widget is still mounted
+    if (mounted) {
+      // Check if the widget is still mounted
       setState(() {
         _speedProvider.isLocationServiceEnabled = serviceEnabled;
       });
@@ -69,9 +71,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _listenToLocationServiceStatus() {
-    _serviceStatusSubscription = Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
+    _serviceStatusSubscription =
+        Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
       bool isEnabled = status == ServiceStatus.enabled;
-      if (mounted) {  // Check if the widget is still mounted
+      if (mounted) {
+        // Check if the widget is still mounted
         setState(() {
           _speedProvider.isLocationServiceEnabled = isEnabled;
         });
@@ -125,7 +129,8 @@ class _HomePageState extends State<HomePage> {
                           setState(() {
                             isKmh = newValue;
                           });
-                          if (mounted) {  // Check if the parent widget is still mounted
+                          if (mounted) {
+                            // Check if the parent widget is still mounted
                             this.setState(() {
                               isKmh = newValue;
                             });
@@ -290,56 +295,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.location_off,
-                    size: 60,
-                    color: Colors.red,
-                  ),
-                  SizedBox(height: 20),
-                  Text(
-                    "Location disabled",
-                    style: TextStyle(
-                      fontSize: 24,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    "To use the app, location services must be enabled in the settings.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white70,
-                    ),
-                  ),
-                  SizedBox(height: 30),
-                  ElevatedButton(
-                    onPressed: () {
-                      Geolocator.openLocationSettings();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: Text(
-                      "Open Settings",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            : const LocationDisabledScreen(),
       ),
     );
   }

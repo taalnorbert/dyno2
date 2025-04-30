@@ -7,6 +7,7 @@ import '../../widgets/Messages/warning_message.dart';
 import '../../widgets/Messages/success_message.dart';
 import '../../widgets/Messages/result_dialog.dart';
 import '../../../providers/speed_provider.dart'; // Import the SpeedProvider
+import '../../widgets/location_disabled_screen.dart';
 
 class ZeroToHundred extends StatefulWidget {
   const ZeroToHundred({super.key});
@@ -19,6 +20,7 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
   // Use the SpeedProvider instance
   final SpeedProvider _speedProvider = SpeedProvider();
 
+  bool isLocationServiceEnabled = true;
   bool isMeasurementActive = false;
   bool isMeasurementStarted = false;
   bool showMovementWarning = false;
@@ -186,7 +188,7 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
-        child: _speedProvider.isLocationServiceEnabled
+        child: isLocationServiceEnabled
             ? Stack(
                 children: [
                   Column(
@@ -237,56 +239,7 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
                     ),
                 ],
               )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.location_off,
-                    size: 60,
-                    color: Colors.red,
-                  ),
-                  SizedBox(height: 20),
-                  Text(
-                    "Location disabled",
-                    style: TextStyle(
-                      fontSize: 24,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    "To use the app, location services must be enabled in the settings.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white70,
-                    ),
-                  ),
-                  SizedBox(height: 30),
-                  ElevatedButton(
-                    onPressed: () {
-                      Geolocator.openLocationSettings();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: Text(
-                      "Open Settings",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            : const LocationDisabledScreen(),
       ),
     );
   }

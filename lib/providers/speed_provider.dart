@@ -9,26 +9,48 @@ class SpeedProvider extends ChangeNotifier {
 
   double currentSpeed = 0.0;
   bool isLocationServiceEnabled = true;
+  bool hasGpsSignal = false;
   StreamSubscription<Position>? _positionStreamSubscription;
+  DateTime? _lastUpdate;
 
   void updateSpeed(double speed) {
     double newSpeed = speed * 3.6;
+    _lastUpdate = DateTime.now();
+
     if (newSpeed != currentSpeed) {
       currentSpeed = newSpeed;
+      hasGpsSignal = true;
       notifyListeners();
     }
   }
 
   void startSpeedTracking() {
+    // Start a timer to check GPS signal status
+    Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (_lastUpdate != null) {
+        final difference = DateTime.now().difference(_lastUpdate!);
+        if (difference.inSeconds >= 3) {
+          hasGpsSignal = false;
+          notifyListeners();
+        }
+      }
+    });
+
     _positionStreamSubscription = Geolocator.getPositionStream(
       locationSettings: AndroidSettings(
         accuracy: LocationAccuracy.bestForNavigation,
         intervalDuration: Duration(milliseconds: 100),
         distanceFilter: 0,
       ),
-    ).listen((Position position) {
-      updateSpeed(position.speed);
-    });
+    ).listen(
+      (Position position) {
+        updateSpeed(position.speed);
+      },
+      onError: (error) {
+        hasGpsSignal = false;
+        notifyListeners();
+      },
+    );
   }
 
   @override

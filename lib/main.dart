@@ -11,9 +11,8 @@ import 'package:dyno2/speed_meter/Navbar/Pages/performance.dart';
 import 'package:dyno2/speed_meter/Navbar/Pages/laptime.dart';
 import 'package:dyno2/speed_meter/Navbar/Pages/zero_to_hundred.dart';
 import 'package:dyno2/speed_meter/Navbar/Pages/hundred_to_twohundred.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:dyno2/providers/speed_provider.dart';
-import 'dart:async';
+import 'package:dyno2/speed_meter/widgets/location_disabled_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -77,8 +76,6 @@ class AuthWrapper extends StatelessWidget {
   }
 }
 
-final SpeedProvider _speedProvider = SpeedProvider();
-
 class MainView extends StatefulWidget {
   const MainView({super.key});
 
@@ -87,48 +84,27 @@ class MainView extends StatefulWidget {
 }
 
 class MainViewState extends State<MainView> {
-  int bottomNavigationIndex = 2; // Add this
-  final PageController pageController = PageController(); // Add this
-  double currentSpeed = 0.0;
-  StreamSubscription<Position>? _positionStreamSubscription;
+  // Change initial index to 2 since Home is at index 2
+  int bottomNavigationIndex = 2;
+  // Initialize PageController with initial page 2
+  final PageController pageController = PageController(initialPage: 2);
+  final SpeedProvider _speedProvider = SpeedProvider();
 
-  @override
-  void initState() {
-    super.initState();
-    _checkPermissionsAndStartListening();
-  }
-
-  @override
-  void dispose() {
-    _positionStreamSubscription?.cancel();
-    pageController.dispose(); // Add this
-    super.dispose();
-  }
-
-  Future<void> _checkPermissionsAndStartListening() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.deniedForever) return;
-    }
-
-    _positionStreamSubscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 0,
+  void _showNoGpsWarning() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Nincs GPS jel! Várj a jel megszerzésére.'),
+        backgroundColor: Colors.orange,
+        duration: Duration(seconds: 2),
       ),
-    ).listen((Position position) {
-      setState(() {
-        currentSpeed = position.speed * 3.6; // Convert to km/h
-      });
-    });
+    );
   }
 
   void _showMeasurementDialog() {
-    if (!mounted) return;
+    if (!mounted || !_speedProvider.hasGpsSignal) {
+      _showNoGpsWarning();
+      return;
+    }
 
     showDialog(
       context: context,
@@ -203,76 +179,106 @@ class MainViewState extends State<MainView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      bottomNavigationBar: NavigationBar(
-        backgroundColor: Colors.black,
-        indicatorColor: Colors.transparent,
-        destinations: [
-          NavigationDestination(
-            icon: GestureDetector(
-              onTap: _showMeasurementDialog,
-              child: Icon(Icons.speed_outlined,
+    return Stack(
+      children: [
+        Scaffold(
+          bottomNavigationBar: NavigationBar(
+            backgroundColor: Colors.black,
+            indicatorColor: Colors.transparent,
+            destinations: [
+              NavigationDestination(
+                icon: Icon(
+                  Icons.speed_outlined,
                   color: bottomNavigationIndex == 0
                       ? Colors.redAccent
-                      : Colors.grey),
+                      : Colors.grey,
+                ),
+                label: 'Measure',
+              ),
+              NavigationDestination(
+                icon: Icon(
+                  Icons.leaderboard,
+                  color: bottomNavigationIndex == 1
+                      ? Colors.redAccent
+                      : Colors.grey,
+                ),
+                label: 'Verseny',
+              ),
+              NavigationDestination(
+                icon: Icon(
+                  Icons.home,
+                  color: bottomNavigationIndex == 2
+                      ? Colors.redAccent
+                      : Colors.grey,
+                ),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(
+                  Icons.speed,
+                  color: bottomNavigationIndex == 3
+                      ? Colors.redAccent
+                      : Colors.grey,
+                ),
+                label: 'Dyno',
+              ),
+              NavigationDestination(
+                icon: Icon(
+                  Icons.timer,
+                  color: bottomNavigationIndex == 4
+                      ? Colors.redAccent
+                      : Colors.grey,
+                ),
+                label: 'Laptime',
+              ),
+            ],
+            selectedIndex: bottomNavigationIndex,
+            height: 80,
+            labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+            onDestinationSelected: (index) {
+              if (!_speedProvider.hasGpsSignal &&
+                  (index == 0 || index == 3 || index == 4)) {
+                _showNoGpsWarning();
+                return;
+              }
+
+              if (index != 0) {
+                pageController.jumpToPage(index);
+                setState(() {
+                  bottomNavigationIndex = index;
+                });
+              } else {
+                _showMeasurementDialog();
+              }
+            },
+          ),
+          body: PageView(
+            controller: pageController,
+            physics: const NeverScrollableScrollPhysics(),
+            children: [
+              const HomePage(),
+              const CompetitionsPage(),
+              const HomePage(),
+              const dynoscreen(),
+              const LapTimeScreen(),
+            ],
+          ),
+        ),
+        // Add LocationDisabledScreen overlay when location is disabled
+        if (!_speedProvider.isLocationServiceEnabled)
+          const Positioned.fill(
+            child: Material(
+              color: Colors.black,
+              child: LocationDisabledScreen(),
             ),
-            label: 'Measure',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.leaderboard,
-                color: bottomNavigationIndex == 1
-                    ? Colors.redAccent
-                    : Colors.grey),
-            label: 'Verseny',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.home,
-                color: bottomNavigationIndex == 2
-                    ? Colors.redAccent
-                    : Colors.grey),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.speed,
-                color: bottomNavigationIndex == 3
-                    ? Colors.redAccent
-                    : Colors.grey),
-            label: 'Dyno',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.timer,
-                color: bottomNavigationIndex == 4
-                    ? Colors.redAccent
-                    : Colors.grey),
-            label: 'Laptime',
-          ),
-        ],
-        selectedIndex: bottomNavigationIndex,
-        height: 80,
-        labelBehavior: NavigationDestinationLabelBehavior
-            .onlyShowSelected, // Only show selected label
-        onDestinationSelected: (index) {
-          if (index != 0) {
-            pageController.jumpToPage(index);
-            setState(() {
-              bottomNavigationIndex = index;
-            });
-          } else {
-            _showMeasurementDialog();
-          }
-        },
-      ),
-      body: PageView(
-        controller: pageController,
-        physics: const NeverScrollableScrollPhysics(),
-        children: [
-          const HomePage(), // Update the order of pages to match navigation
-          const CompetitionsPage(),
-          const HomePage(),
-          const dynoscreen(),
-          const LapTimeScreen(),
-        ],
-      ),
+      ],
     );
+  }
+
+  @override
+  void dispose() {
+    pageController.dispose();
+    super.dispose();
   }
 }

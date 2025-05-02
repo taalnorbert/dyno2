@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:go_router/go_router.dart';
+import 'package:dyno2/speed_meter/widgets/Messages/warning_message.dart';
 
 class AuthService {
   final logger = Logger();
@@ -18,10 +19,52 @@ class AuthService {
     try {
       User? user = _auth.currentUser;
       if (user != null) {
+        // Get user ID before deletion
+        final String uid = user.uid;
+
+        // Delete all user data from Firestore
+        await FirebaseFirestore.instance.collection('users').doc(uid).delete();
+
+        // Delete any other collections related to the user
+        // For example, if you have user-specific measurements or records
+        await _deleteUserRelatedData(uid);
+
+        // Finally delete the user account
         await user.delete();
       }
     } catch (e) {
       logger.e('Account deletion error:',
+          error: e, stackTrace: StackTrace.current);
+      rethrow;
+    }
+  }
+
+  // Helper method to delete all user-related data
+  Future<void> _deleteUserRelatedData(String uid) async {
+    try {
+      // Add all collections that contain user-specific data
+      final collections = [
+        'measurements',
+        'laptimes',
+        'dynoResults',
+        // Add any other collections that store user data
+      ];
+
+      // Delete data from each collection
+      for (String collection in collections) {
+        // Get all documents where userId matches
+        final querySnapshot = await FirebaseFirestore.instance
+            .collection(collection)
+            .where('userId', isEqualTo: uid)
+            .get();
+
+        // Delete each document
+        for (var doc in querySnapshot.docs) {
+          await doc.reference.delete();
+        }
+      }
+    } catch (e) {
+      logger.e('Delete user data error:',
           error: e, stackTrace: StackTrace.current);
       rethrow;
     }
@@ -40,55 +83,118 @@ class AuthService {
     }
   }
 
+  void showWarningMessage(BuildContext context, String message, Color color) {
+    // Ensure we have a valid context and the overlay is available
+    if (!context.mounted) return;
+
+    final overlay = Overlay.of(context, rootOverlay: true);
+
+    // Create an overlay entry
+    final overlayEntry = OverlayEntry(
+      builder: (context) => WarningMessage(
+        message: message,
+        icon: Icons.warning,
+        color: color,
+        iconColor: Colors.white,
+      ),
+    );
+
+    // Insert the overlay
+    overlay.insert(overlayEntry);
+
+    // Remove after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      // Check if the overlay entry is still valid before removing
+      if (overlayEntry.mounted) {
+        overlayEntry.remove();
+      }
+    });
+  }
+
+  // Add method to handle warning messages safely
+  void _showWarningMessageSafe(
+      BuildContext context, String message, Color color) {
+    if (!context.mounted) return;
+    showWarningMessage(context, message, color);
+  }
+
   Future<void> signup({
     required String email,
     required String password,
     required BuildContext context,
   }) async {
     try {
-      // Create user account
+      // Create the user account
       UserCredential userCredential =
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
+      // Store registration time and user data in Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .set({
+        'email': email,
+        'registrationTime': FieldValue.serverTimestamp(),
+        'isVerified': false,
+      });
+
       // Send verification email
       await userCredential.user?.sendEmailVerification();
 
-      // Sign out the user immediately after registration
+      // Schedule deletion after 24 hours if not verified
+      Future.delayed(const Duration(hours: 24), () async {
+        // Check if user exists and is still not verified
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null && !user.emailVerified) {
+          // Get user data from Firestore
+          final userData = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+
+          // Delete user if still not verified
+          if (userData.exists && userData.data()?['isVerified'] == false) {
+            await user.delete();
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .delete();
+          }
+        }
+      });
+
       await FirebaseAuth.instance.signOut();
 
-      // Show success toast
-      Fluttertoast.showToast(
-        msg:
-            "Registration successful! Please check your email to verify your account.",
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.green,
-        textColor: Colors.white,
-        fontSize: 14.0,
+      if (!context.mounted) return;
+      _showWarningMessageSafe(
+        context,
+        "Registration successful! Please verify your email within 24 hours or your account will be deleted.",
+        Colors.green,
       );
 
-      // Navigate to login page instead of home
-      // ignore: use_build_context_synchronously
+      if (!context.mounted) return;
       context.go('/login');
     } on FirebaseAuthException catch (e) {
+      if (!context.mounted) return;
       String message = '';
       if (e.code == 'weak-password') {
         message = 'The password provided is too weak.';
       } else if (e.code == 'email-already-in-use') {
         message = 'An account already exists with that email.';
       }
-      Fluttertoast.showToast(
-        msg: message,
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.SNACKBAR,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-        fontSize: 14.0,
-      );
+      _showWarningMessageSafe(context, message, Colors.red);
     }
+  }
+
+  // Add method to mark user as verified when they verify their email
+  Future<void> _markUserAsVerified(String uid) async {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .update({'isVerified': true});
   }
 
   // Add method to check email verification status
@@ -131,29 +237,27 @@ class AuthService {
     required BuildContext context,
   }) async {
     try {
+      if (!context.mounted) return;
       UserCredential userCredential =
           await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // Check if email is verified
+      if (!context.mounted) return;
       if (!userCredential.user!.emailVerified) {
-        await FirebaseAuth.instance.signOut(); // Sign out if email not verified
-        Fluttertoast.showToast(
-          msg: "Please verify your email before logging in. Check your inbox.",
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
-          backgroundColor: Colors.orange,
-          textColor: Colors.white,
-          fontSize: 14.0,
+        await FirebaseAuth.instance.signOut();
+        _showWarningMessageSafe(
+          // ignore: use_build_context_synchronously
+          context,
+          "Please verify your email before logging in. Check your inbox.",
+          Colors.orange,
         );
 
-        // Add option to resend verification email
+        if (!context.mounted) return;
         bool? resendEmail = await showDialog<bool>(
-          // ignore: use_build_context_synchronously
           context: context,
-          builder: (BuildContext context) {
+          builder: (BuildContext dialogContext) {
             return AlertDialog(
               backgroundColor: Colors.grey[900],
               title: const Text('Email Not Verified',
@@ -164,12 +268,12 @@ class AuthService {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context, false),
+                  onPressed: () => Navigator.pop(dialogContext, false),
                   child: const Text('Cancel',
                       style: TextStyle(color: Colors.grey)),
                 ),
                 TextButton(
-                  onPressed: () => Navigator.pop(context, true),
+                  onPressed: () => Navigator.pop(dialogContext, true),
                   child:
                       const Text('Resend', style: TextStyle(color: Colors.red)),
                 ),
@@ -179,37 +283,38 @@ class AuthService {
         );
 
         if (resendEmail == true) {
+          if (!context.mounted) return;
+          userCredential =
+              await FirebaseAuth.instance.signInWithEmailAndPassword(
+            email: email,
+            password: password,
+          );
+
           await userCredential.user?.sendEmailVerification();
-          Fluttertoast.showToast(
-            msg: "Verification email resent. Please check your inbox.",
-            toastLength: Toast.LENGTH_LONG,
-            gravity: ToastGravity.BOTTOM,
-            backgroundColor: Colors.green,
-            textColor: Colors.white,
-            fontSize: 14.0,
+
+          if (!context.mounted) return;
+          _showWarningMessageSafe(
+            context,
+            "Verification email resent. Please check your inbox.",
+            Colors.green,
           );
         }
         return;
+      } else {
+        // Mark user as verified in Firestore if email is verified
+        await _markUserAsVerified(userCredential.user!.uid);
+        if (!context.mounted) return;
+        context.go('/home');
       }
-
-      // If email is verified, proceed with login
-      // ignore: use_build_context_synchronously
-      context.go('/home');
     } on FirebaseAuthException catch (e) {
+      if (!context.mounted) return;
       String message = 'An error occurred during sign in';
       if (e.code == 'user-not-found') {
         message = 'No user found for that email.';
       } else if (e.code == 'wrong-password') {
         message = 'Wrong password provided for that user.';
       }
-      Fluttertoast.showToast(
-        msg: message,
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-        fontSize: 14.0,
-      );
+      _showWarningMessageSafe(context, message, Colors.red);
     }
   }
 
@@ -324,27 +429,19 @@ class AuthService {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
 
       // Show success message
-      Fluttertoast.showToast(
-        msg: "Password reset email sent. Please check your inbox.",
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.green,
-        textColor: Colors.white,
-        fontSize: 14.0,
+      showWarningMessage(
+        // ignore: use_build_context_synchronously
+        context,
+        "Password reset email sent. Please check your inbox.",
+        Colors.green,
       );
     } on FirebaseAuthException catch (e) {
       String message = 'An error occurred';
       if (e.code == 'user-not-found') {
         message = 'No user found for that email.';
       }
-      Fluttertoast.showToast(
-        msg: message,
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-        fontSize: 14.0,
-      );
+      // ignore: use_build_context_synchronously
+      showWarningMessage(context, message, Colors.red);
     }
   }
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dyno2/speed_meter/widgets/Messages/warning_message.dart';
 
 class Login extends StatefulWidget {
   // Change to StatefulWidget
@@ -19,6 +20,24 @@ class _LoginState extends State<Login> {
   final TextEditingController _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
   bool _isPasswordVisible = false; // Add this variable
+  bool showLoginError = false;
+  String errorMessage = '';
+
+  // Add method to show warning
+  void _showWarning(String message) {
+    setState(() {
+      errorMessage = message;
+      showLoginError = true;
+    });
+
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          showLoginError = false;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,36 +62,48 @@ class _LoginState extends State<Login> {
             resizeToAvoidBottomInset: true,
             bottomNavigationBar: _signup(context),
             body: SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  child: Column(
-                    mainAxisAlignment:
-                        MainAxisAlignment.center, // Tartalom középre igazítása
-                    children: [
-                      Text(
-                        'Log in',
-                        style: GoogleFonts.raleway(
-                          textStyle: const TextStyle(
-                            color: Colors.red, // Piros szöveg
-                            fontWeight: FontWeight.bold,
-                            fontSize: 32,
+              child: Stack(
+                children: [
+                  Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 16),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment
+                            .center, // Tartalom középre igazítása
+                        children: [
+                          Text(
+                            'Log in',
+                            style: GoogleFonts.raleway(
+                              textStyle: const TextStyle(
+                                color: Colors.red, // Piros szöveg
+                                fontWeight: FontWeight.bold,
+                                fontSize: 32,
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(
+                              height:
+                                  40), // Kisebb távolság a cím és a mezők között
+                          _emailAddress(),
+                          const SizedBox(height: 20),
+                          _password(),
+                          _forgotPassword(), // Add this line
+                          const SizedBox(height: 20), // Reduced from 30 to 20
+                          _combinedLoginButtons(context), // Kombinált gomb
+                        ],
                       ),
-                      const SizedBox(
-                          height:
-                              40), // Kisebb távolság a cím és a mezők között
-                      _emailAddress(),
-                      const SizedBox(height: 20),
-                      _password(),
-                      _forgotPassword(), // Add this line
-                      const SizedBox(height: 20), // Reduced from 30 to 20
-                      _combinedLoginButtons(context), // Kombinált gomb
-                    ],
+                    ),
                   ),
-                ),
+                  if (showLoginError)
+                    WarningMessage(
+                      key: const Key('loginError'),
+                      message: errorMessage,
+                      icon: Icons.warning,
+                      color: Colors.red,
+                      iconColor: Colors.white,
+                    ),
+                ],
               ),
             ),
           );
@@ -193,11 +224,7 @@ class _LoginState extends State<Login> {
             width: 150,
             child: GestureDetector(
               onTap: () async {
-                await _authService.signin(
-                  email: _emailController.text,
-                  password: _passwordController.text,
-                  context: context,
-                );
+                _handleLogin();
               },
               child: Container(
                 decoration: BoxDecoration(
@@ -373,5 +400,18 @@ class _LoginState extends State<Login> {
         ),
       ),
     );
+  }
+
+  // Update login button handler
+  void _handleLogin() async {
+    try {
+      await AuthService().signin(
+        email: _emailController.text,
+        password: _passwordController.text,
+        context: context,
+      );
+    } catch (e) {
+      _showWarning(e.toString());
+    }
   }
 }

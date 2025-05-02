@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dyno2/speed_meter/widgets/Messages/warning_message.dart';
 
 class Signup extends StatefulWidget {
   // Change to StatefulWidget
@@ -15,43 +16,98 @@ class Signup extends StatefulWidget {
 class _SignupState extends State<Signup> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController(); // Add this
   bool _isPasswordVisible = false; // Add this variable
+  bool _isConfirmPasswordVisible = false; // Add this
+  bool _hasMinLength = false;
+  bool _hasUpperCase = false;
+  bool _hasNumber = false;
+
+  // Add new state variables for warning messages
+  bool showPasswordRequirementsWarning = false;
+  bool showPasswordMismatchWarning = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black, // Fekete háttér
+      backgroundColor: Colors.black,
       resizeToAvoidBottomInset: true,
       bottomNavigationBar: _signin(context),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            child: Column(
-              mainAxisAlignment:
-                  MainAxisAlignment.center, // Tartalom középre igazítása
-              children: [
-                Text(
-                  'Register Account',
-                  style: GoogleFonts.raleway(
-                    textStyle: const TextStyle(
-                      color: Colors.red, // Piros szöveg
-                      fontWeight: FontWeight.bold,
-                      fontSize: 32,
+        child: Stack(
+          children: [
+            Center(
+              child: SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Register Account',
+                      style: GoogleFonts.raleway(
+                        textStyle: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 32,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 40),
+                    _emailAddress(),
+                    const SizedBox(height: 20),
+                    _password(),
+                    const SizedBox(height: 20),
+                    _confirmPassword(),
+                    const SizedBox(height: 16),
+                    // Password requirements moved here
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildPasswordRequirement(
+                            isValid: _hasMinLength,
+                            text: "At least 8 characters",
+                          ),
+                          const SizedBox(height: 8),
+                          _buildPasswordRequirement(
+                            isValid: _hasUpperCase,
+                            text: "At least one uppercase letter",
+                          ),
+                          const SizedBox(height: 8),
+                          _buildPasswordRequirement(
+                            isValid: _hasNumber,
+                            text: "At least one number",
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    _signup(context),
+                  ],
                 ),
-                const SizedBox(
-                    height: 40), // Kisebb távolság a cím és a mezők között
-                _emailAddress(),
-                const SizedBox(height: 20),
-                _password(),
-                const SizedBox(
-                    height: 30), // Kisebb távolság a mezők és a gomb között
-                _signup(context),
-              ],
+              ),
             ),
-          ),
+            // Add warning messages
+            if (showPasswordRequirementsWarning)
+              const WarningMessage(
+                key: Key('requirementsWarning'),
+                message: "Please meet all password requirements",
+                icon: Icons.warning,
+                color: Colors.red,
+                iconColor: Colors.white,
+              ),
+            if (showPasswordMismatchWarning)
+              const WarningMessage(
+                key: Key('mismatchWarning'),
+                message: "Passwords do not match!",
+                icon: Icons.warning,
+                color: Colors.red,
+                iconColor: Colors.white,
+              ),
+          ],
         ),
       ),
     );
@@ -146,6 +202,60 @@ class _SignupState extends State<Signup> {
                 },
               ),
             ),
+            onChanged: _checkPasswordConditions,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _confirmPassword() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Confirm Password',
+          style: GoogleFonts.raleway(
+            textStyle: const TextStyle(
+              color: Colors.grey,
+              fontWeight: FontWeight.normal,
+              fontSize: 16,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: 300,
+          child: TextField(
+            obscureText: !_isConfirmPasswordVisible,
+            controller: _confirmPasswordController,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.grey[900],
+              border: OutlineInputBorder(
+                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              hintText: 'Confirm your password',
+              hintStyle: const TextStyle(color: Colors.grey),
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _isConfirmPasswordVisible
+                      ? Icons.visibility
+                      : Icons.visibility_off,
+                  color: Colors.grey,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                  });
+                },
+              ),
+            ),
           ),
         ),
       ],
@@ -170,6 +280,18 @@ class _SignupState extends State<Signup> {
             width: 150,
             child: GestureDetector(
               onTap: () async {
+                // Check if all password conditions are met
+                if (!_hasMinLength || !_hasUpperCase || !_hasNumber) {
+                  _showWarning('requirements');
+                  return;
+                }
+
+                if (_passwordController.text !=
+                    _confirmPasswordController.text) {
+                  _showWarning('mismatch');
+                  return;
+                }
+
                 await AuthService().signup(
                   email: _emailController.text,
                   password: _passwordController.text,
@@ -272,5 +394,60 @@ class _SignupState extends State<Signup> {
         ),
       ),
     );
+  }
+
+  void _checkPasswordConditions(String password) {
+    setState(() {
+      _hasMinLength = password.length >= 8;
+      _hasUpperCase = password.contains(RegExp(r'[A-Z]'));
+      _hasNumber = password.contains(RegExp(r'[0-9]'));
+    });
+  }
+
+  // Add this helper method to build requirement indicators
+  Widget _buildPasswordRequirement({
+    required bool isValid,
+    required String text,
+  }) {
+    return Row(
+      children: [
+        Icon(
+          isValid ? Icons.check_circle : Icons.cancel,
+          color: isValid ? Colors.green : Colors.grey,
+          size: 16,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: TextStyle(
+            color: isValid ? Colors.green : Colors.grey,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Add method to show warning messages
+  void _showWarning(String type) {
+    setState(() {
+      if (type == 'requirements') {
+        showPasswordRequirementsWarning = true;
+        showPasswordMismatchWarning = false;
+      } else if (type == 'mismatch') {
+        showPasswordMismatchWarning = true;
+        showPasswordRequirementsWarning = false;
+      }
+    });
+
+    // Auto-hide warning after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          showPasswordRequirementsWarning = false;
+          showPasswordMismatchWarning = false;
+        });
+      }
+    });
   }
 }

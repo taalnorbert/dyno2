@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../meter_painter.dart';
 import '../../../services/auth_service.dart';
-import '../../profile_page.dart';
-import 'package:dyno2/login/login.dart';
 import '../../widgets/Messages/help_dialog.dart';
 import '../../../providers/speed_provider.dart';
 import '../../widgets/location_disabled_screen.dart';
+import 'package:go_router/go_router.dart';
+
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -251,20 +251,9 @@ class _HomePageState extends State<HomePage> {
                           final user = AuthService().currentUser;
                           if (user != null) {
                             final userEmail = user.email ?? "Nincs email cím";
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ProfilePage(userEmail: userEmail),
-                              ),
-                            );
+                            context.push('/profile', extra: userEmail);
                           } else {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => Login(),
-                              ),
-                            );
+                            context.go('/login');
                           }
                         },
                       ),

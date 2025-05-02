@@ -1,10 +1,11 @@
-import 'package:dyno2/signup/signup.dart';
 import 'package:dyno2/services/auth_service.dart';
 import 'package:dyno2/speed_meter/Navbar/Pages/home.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
+
 
 class Login extends StatelessWidget {
   Login({super.key});
@@ -200,12 +201,7 @@ class Login extends StatelessWidget {
             width: 150, // A jobb oldali rész szélessége
             child: GestureDetector(
               onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (BuildContext context) => const HomePage(),
-                  ),
-                );
+                context.go('/home'); 
               },
               child: Container(
                 decoration: BoxDecoration(
@@ -263,10 +259,7 @@ class Login extends StatelessWidget {
               ),
               recognizer: TapGestureRecognizer()
                 ..onTap = () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => Signup()),
-                  );
+                  context.go('/signup'); 
                 },
             ),
           ],

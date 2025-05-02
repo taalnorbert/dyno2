@@ -5,7 +5,8 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
-import '../login/login.dart';
+import 'package:go_router/go_router.dart';
+
 
 class ProfilePage extends StatefulWidget {
   final String userEmail;
@@ -176,10 +177,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   Navigator.pop(dialogContext); 
 
                   if (!mounted) return;
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => Login()),
-                  );
+                  context.go('/login'); 
                 } catch (e) {
                   if (!dialogContext.mounted) return;
                   Navigator.pop(dialogContext);
@@ -525,10 +523,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   Navigator.pop(dialogContext); // Close dialog
 
                   if (!mounted) return;
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => Login()),
-                  );
+                  context.go('/login'); 
                 } catch (e) {
                   if (!dialogContext.mounted) return;
                   Navigator.pop(dialogContext);

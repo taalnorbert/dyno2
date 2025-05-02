@@ -1,13 +1,11 @@
-import 'package:dyno2/speed_meter/Navbar/Pages/home.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:logger/logger.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../login/login.dart';
 import 'dart:io';
 import 'dart:convert';
-
+import 'package:go_router/go_router.dart';
 class AuthService {
   final logger = Logger();
   get userStream => null;
@@ -46,18 +44,14 @@ class AuthService {
     required String password,
     required BuildContext context,
   }) async {
-    final navigator = Navigator.of(context);
     try {
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      navigator.pushReplacement(
-        MaterialPageRoute(
-          builder: (BuildContext context) => const HomePage(),
-        ),
-      );
+     // ignore: use_build_context_synchronously
+     context.go('/home');
     } on FirebaseAuthException catch (e) {
       String message = '';
       if (e.code == 'weak-password') {
@@ -81,18 +75,14 @@ class AuthService {
     required String password,
     required BuildContext context,
   }) async {
-    final navigator = Navigator.of(context);
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      navigator.pushReplacement(
-        MaterialPageRoute(
-          builder: (BuildContext context) => const HomePage(),
-        ),
-      );
+      // ignore: use_build_context_synchronously
+      context.go('/home');
     } on FirebaseAuthException catch (e) {
       String message = '';
       if (e.code == 'invalid-email') {
@@ -114,13 +104,9 @@ class AuthService {
   Future<void> signout({
     required BuildContext context,
   }) async {
-    final navigator = Navigator.of(context);
     await FirebaseAuth.instance.signOut();
-    navigator.pushReplacement(
-      MaterialPageRoute(
-        builder: (BuildContext context) => Login(),
-      ),
-    );
+    // ignore: use_build_context_synchronously
+    context.go('/login');
   }
 
   Future<bool> verifyPassword(String password) async {

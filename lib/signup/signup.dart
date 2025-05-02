@@ -1,8 +1,8 @@
-import 'package:dyno2/login/login.dart';
 import 'package:dyno2/services/auth_service.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 
 class Signup extends StatelessWidget {
   Signup({super.key});
@@ -185,10 +185,7 @@ class Signup extends StatelessWidget {
               ),
               recognizer: TapGestureRecognizer()
                 ..onTap = () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => Login()),
-                  );
+                  context.go('/login');
                 },
             ),
           ],

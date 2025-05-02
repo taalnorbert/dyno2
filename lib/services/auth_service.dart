@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:go_router/go_router.dart';
+
 class AuthService {
   final logger = Logger();
   get userStream => null;
@@ -50,8 +51,8 @@ class AuthService {
         password: password,
       );
 
-     // ignore: use_build_context_synchronously
-     context.go('/home');
+      // ignore: use_build_context_synchronously
+      context.go('/home');
     } on FirebaseAuthException catch (e) {
       String message = '';
       if (e.code == 'weak-password') {
@@ -80,24 +81,10 @@ class AuthService {
         email: email,
         password: password,
       );
-
       // ignore: use_build_context_synchronously
       context.go('/home');
-    } on FirebaseAuthException catch (e) {
-      String message = '';
-      if (e.code == 'invalid-email') {
-        message = 'No user found for that email.';
-      } else if (e.code == 'invalid-credential') {
-        message = 'Wrong password provided for that user.';
-      }
-      Fluttertoast.showToast(
-        msg: message,
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.SNACKBAR,
-        backgroundColor: Colors.black54,
-        textColor: Colors.white,
-        fontSize: 14.0,
-      );
+    } catch (e) {
+      // ... existing error handling ...
     }
   }
 

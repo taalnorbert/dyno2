@@ -18,6 +18,8 @@ class _MainScaffoldState extends State<MainScaffold> {
   bool showLowSpeedWarning = false;
   bool showHighSpeedWarning = false;
   bool showGpsWarning = false;
+  bool isMeasurementDialogVisible = false;
+  int previousIndex = 2;
 
   void _showNoGpsWarning() {
     setState(() {
@@ -61,6 +63,12 @@ class _MainScaffoldState extends State<MainScaffold> {
       _showNoGpsWarning();
       return;
     }
+
+    setState(() {
+      isMeasurementDialogVisible = true;
+      previousIndex = bottomNavigationIndex;
+      bottomNavigationIndex = 0;
+    });
 
     showDialog(
       context: context,
@@ -110,7 +118,14 @@ class _MainScaffoldState extends State<MainScaffold> {
           ),
         );
       },
-    );
+    ).then((_) {
+      if (mounted) {
+        setState(() {
+          isMeasurementDialogVisible = false;
+          bottomNavigationIndex = previousIndex;
+        });
+      }
+    });
   }
 
   @override
@@ -182,13 +197,14 @@ class _MainScaffoldState extends State<MainScaffold> {
                     return;
                   }
 
-                  setState(() {
-                    bottomNavigationIndex = index;
-                  });
-
                   if (index == 0) {
                     _showMeasurementDialog();
                   } else {
+                    setState(() {
+                      bottomNavigationIndex = index;
+                      previousIndex = index;
+                    });
+
                     switch (index) {
                       case 1:
                         context.go('/competitions');

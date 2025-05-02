@@ -6,8 +6,7 @@ import '../../widgets/buttons/measurement_button.dart';
 import '../../widgets/Messages/warning_message.dart';
 import '../../widgets/Messages/success_message.dart';
 import '../../widgets/Messages/result_dialog.dart';
-import '../../../providers/speed_provider.dart'; // Import the SpeedProvider
-import '../../widgets/location_disabled_screen.dart';
+import '../../../providers/speed_provider.dart'; 
 
 class ZeroToHundred extends StatefulWidget {
   const ZeroToHundred({super.key});
@@ -193,8 +192,7 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
-        child: isLocationServiceEnabled
-            ? Stack(
+        child: Stack(
                 children: [
                   Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -243,8 +241,7 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
                       iconColor: Colors.white,
                     ),
                 ],
-              )
-            : const LocationDisabledScreen(),
+              ),
       ),
     );
   }

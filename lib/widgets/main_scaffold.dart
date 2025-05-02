@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/speed_provider.dart';
 import '../speed_meter/widgets/Messages/warning_message.dart';
@@ -20,6 +23,41 @@ class _MainScaffoldState extends State<MainScaffold> {
   bool showGpsWarning = false;
   bool isMeasurementDialogVisible = false;
   int previousIndex = 2;
+  bool _hasLocationPermission = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLocationPermission();
+    _listenToPermissionChanges();
+  }
+
+  Future<void> _checkLocationPermission() async {
+    final permission = await Geolocator.checkPermission();
+    setState(() {
+      _hasLocationPermission = permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always;
+    });
+  }
+
+  void _listenToPermissionChanges() {
+    Timer.periodic(const Duration(seconds: 1), (timer) async {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      final permission = await Geolocator.checkPermission();
+      final hasPermission = permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always;
+
+      if (_hasLocationPermission != hasPermission) {
+        setState(() {
+          _hasLocationPermission = hasPermission;
+        });
+      }
+    });
+  }
 
   void _showNoGpsWarning() {
     setState(() {
@@ -135,6 +173,10 @@ class _MainScaffoldState extends State<MainScaffold> {
       builder: (context, _) {
         if (!_speedProvider.isLocationServiceEnabled) {
           return const LocationDisabledScreen();
+        }
+
+        if (!_hasLocationPermission) {
+          return const LocationPermissionDeniedScreen();
         }
 
         return Stack(

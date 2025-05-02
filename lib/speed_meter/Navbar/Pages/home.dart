@@ -5,9 +5,7 @@ import '../../meter_painter.dart';
 import '../../../services/auth_service.dart';
 import '../../widgets/Messages/help_dialog.dart';
 import '../../../providers/speed_provider.dart';
-import '../../widgets/location_disabled_screen.dart';
 import 'package:go_router/go_router.dart';
-
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -202,89 +200,86 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
-        child: _speedProvider.isLocationServiceEnabled
-            ? Stack(
-                children: [
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      AnimatedContainer(
-                        duration: Duration(milliseconds: 300),
-                        width: MediaQuery.sizeOf(context).width * 0.85,
-                        height: MediaQuery.sizeOf(context).width * 0.85,
-                        child: GestureDetector(
-                          onTap: _toggleSpeedUnit,
-                          child: CustomPaint(
-                            painter: MeterPainter(
-                                _getSpeedInCurrentUnit(
-                                    _speedProvider.currentSpeed),
-                                isKmh: isKmh),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Profil ikon a bal felső sarokban
-                  Positioned(
-                    top: 30,
-                    left: 0,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                            color: AuthService().currentUser != null
-                                ? Colors.greenAccent
-                                : Colors.white,
-                            width: 2),
-                      ),
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.person,
-                          color: AuthService().currentUser != null
-                              ? Colors.greenAccent
-                              : Colors.white,
-                        ),
-                        iconSize: 20,
-                        onPressed: () async {
-                          final user = AuthService().currentUser;
-                          if (user != null) {
-                            final userEmail = user.email ?? "Nincs email cím";
-                            context.push('/profile', extra: userEmail);
-                          } else {
-                            context.go('/login');
-                          }
-                        },
-                      ),
+        child: Stack(
+          children: [
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedContainer(
+                  duration: Duration(milliseconds: 300),
+                  width: MediaQuery.sizeOf(context).width * 0.85,
+                  height: MediaQuery.sizeOf(context).width * 0.85,
+                  child: GestureDetector(
+                    onTap: _toggleSpeedUnit,
+                    child: CustomPaint(
+                      painter: MeterPainter(
+                          _getSpeedInCurrentUnit(_speedProvider.currentSpeed),
+                          isKmh: isKmh),
                     ),
                   ),
-                  // Kérdőjel ikon a jobb felső sarokban
-                  Positioned(
-                    top: 30,
-                    right: 0,
-                    child: GestureDetector(
-                      onTap: _showSettingsDialog,
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            Icons.settings,
-                            size: 20,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+                ),
+              ],
+            ),
+            // Profil ikon a bal felső sarokban
+            Positioned(
+              top: 30,
+              left: 0,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: AuthService().currentUser != null
+                          ? Colors.greenAccent
+                          : Colors.white,
+                      width: 2),
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    Icons.person,
+                    color: AuthService().currentUser != null
+                        ? Colors.greenAccent
+                        : Colors.white,
+                  ),
+                  iconSize: 20,
+                  onPressed: () async {
+                    final user = AuthService().currentUser;
+                    if (user != null) {
+                      final userEmail = user.email ?? "Nincs email cím";
+                      context.push('/profile', extra: userEmail);
+                    } else {
+                      context.go('/login');
+                    }
+                  },
+                ),
+              ),
+            ),
+            // Kérdőjel ikon a jobb felső sarokban
+            Positioned(
+              top: 30,
+              right: 0,
+              child: GestureDetector(
+                onTap: _showSettingsDialog,
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.settings,
+                      size: 20,
+                      color: Colors.white,
                     ),
                   ),
-                ],
-              )
-            : const LocationDisabledScreen(),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

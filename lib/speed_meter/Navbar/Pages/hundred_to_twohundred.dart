@@ -6,7 +6,6 @@ import '../../meter_painter.dart';
 import '../../widgets/Messages/warning_message.dart';
 import '../../widgets/Messages/success_message.dart';
 import '../../widgets/Messages/result_dialog.dart';
-import '../../widgets/location_disabled_screen.dart';
 
 class HundredToTwoHundred extends StatefulWidget {
   const HundredToTwoHundred({super.key});
@@ -196,8 +195,7 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
-        child: isLocationServiceEnabled
-            ? Stack(
+        child: Stack(
                 children: [
                   Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -252,8 +250,7 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
                       iconColor: Colors.white,
                     ),
                 ],
-              )
-            : const LocationDisabledScreen(),
+              ),
       ),
     );
   }

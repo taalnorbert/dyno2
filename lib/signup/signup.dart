@@ -23,10 +23,12 @@ class _SignupState extends State<Signup> {
   bool _hasMinLength = false;
   bool _hasUpperCase = false;
   bool _hasNumber = false;
+  bool _isEmailValid = false;
 
   // Add new state variables for warning messages
   bool showPasswordRequirementsWarning = false;
   bool showPasswordMismatchWarning = false;
+  bool showEmailWarning = false; // Add this variable
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +109,14 @@ class _SignupState extends State<Signup> {
                 color: Colors.red,
                 iconColor: Colors.white,
               ),
+            if (showEmailWarning)
+              const WarningMessage(
+                key: Key('emailWarning'),
+                message: "Please enter a valid email address",
+                icon: Icons.warning,
+                color: Colors.red,
+                iconColor: Colors.white,
+              ),
           ],
         ),
       ),
@@ -122,31 +132,39 @@ class _SignupState extends State<Signup> {
           'Email Address',
           style: GoogleFonts.raleway(
             textStyle: const TextStyle(
-              color: Colors.grey, // Szürke szöveg
+              color: Colors.grey,
               fontWeight: FontWeight.normal,
               fontSize: 16,
             ),
           ),
         ),
-        const SizedBox(height: 8), // Kisebb távolság a cím és a mező között
+        const SizedBox(height: 8),
         SizedBox(
-          width: 300, // Szélesség csökkentése
+          width: 300,
           child: TextField(
             controller: _emailController,
-            style: const TextStyle(
-                color: Colors.white), // Fehér szöveg a beviteli mezőben
+            style: const TextStyle(color: Colors.white),
+            onChanged: (value) {
+              setState(() {
+                _isEmailValid = _validateEmail(value);
+              });
+            },
             decoration: InputDecoration(
               filled: true,
-              fillColor: Colors.grey[900], // Sötétszürke háttér
+              fillColor: Colors.grey[900],
               border: OutlineInputBorder(
                 borderSide: BorderSide.none,
                 borderRadius: BorderRadius.circular(14),
               ),
-              hintText: 'Enter your email', // Placeholder szöveg
-              hintStyle:
-                  const TextStyle(color: Colors.grey), // Szürke placeholder
-              contentPadding: const EdgeInsets.symmetric(
-                  vertical: 14, horizontal: 16), // Kisebb padding
+              hintText: 'Enter your email',
+              hintStyle: const TextStyle(color: Colors.grey),
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              // Add validation indicator
+              suffixIcon: Icon(
+                _isEmailValid ? Icons.check_circle : Icons.error,
+                color: _isEmailValid ? Colors.green : Colors.grey,
+              ),
             ),
           ),
         ),
@@ -280,7 +298,13 @@ class _SignupState extends State<Signup> {
             width: 150,
             child: GestureDetector(
               onTap: () async {
-                // Check if all password conditions are met
+                // Check email validity first
+                if (!_isEmailValid) {
+                  _showWarning('email');
+                  return;
+                }
+
+                // Check password conditions
                 if (!_hasMinLength || !_hasUpperCase || !_hasNumber) {
                   _showWarning('requirements');
                   return;
@@ -431,23 +455,37 @@ class _SignupState extends State<Signup> {
   // Add method to show warning messages
   void _showWarning(String type) {
     setState(() {
-      if (type == 'requirements') {
-        showPasswordRequirementsWarning = true;
-        showPasswordMismatchWarning = false;
-      } else if (type == 'mismatch') {
-        showPasswordMismatchWarning = true;
-        showPasswordRequirementsWarning = false;
+      showPasswordRequirementsWarning = false;
+      showPasswordMismatchWarning = false;
+      showEmailWarning = false; // Add this variable to class properties
+
+      switch (type) {
+        case 'email':
+          showEmailWarning = true;
+          break;
+        case 'requirements':
+          showPasswordRequirementsWarning = true;
+          break;
+        case 'mismatch':
+          showPasswordMismatchWarning = true;
+          break;
       }
     });
 
-    // Auto-hide warning after 3 seconds
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         setState(() {
           showPasswordRequirementsWarning = false;
           showPasswordMismatchWarning = false;
+          showEmailWarning = false;
         });
       }
     });
+  }
+
+  // Add this validation method
+  bool _validateEmail(String email) {
+    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+    return emailRegex.hasMatch(email);
   }
 }

@@ -23,8 +23,12 @@ final router = GoRouter(
     GoRoute(
       path: '/',
       redirect: (context, state) {
-        // Only check auth status on initial app launch
-        if (FirebaseAuth.instance.currentUser != null) {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          if (!user.emailVerified) {
+            FirebaseAuth.instance.signOut();
+            return '/login';
+          }
           return '/home';
         }
         return '/login';

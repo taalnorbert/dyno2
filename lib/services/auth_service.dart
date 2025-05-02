@@ -46,13 +46,33 @@ class AuthService {
     required BuildContext context,
   }) async {
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      // Create user account
+      UserCredential userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
+      // Send verification email
+      await userCredential.user?.sendEmailVerification();
+
+      // Sign out the user immediately after registration
+      await FirebaseAuth.instance.signOut();
+
+      // Show success toast
+      Fluttertoast.showToast(
+        msg:
+            "Registration successful! Please check your email to verify your account.",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+        fontSize: 14.0,
+      );
+
+      // Navigate to login page instead of home
       // ignore: use_build_context_synchronously
-      context.go('/home');
+      context.go('/login');
     } on FirebaseAuthException catch (e) {
       String message = '';
       if (e.code == 'weak-password') {
@@ -64,7 +84,41 @@ class AuthService {
         msg: message,
         toastLength: Toast.LENGTH_LONG,
         gravity: ToastGravity.SNACKBAR,
-        backgroundColor: Colors.black54,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 14.0,
+      );
+    }
+  }
+
+  // Add method to check email verification status
+  bool isEmailVerified() {
+    return FirebaseAuth.instance.currentUser?.emailVerified ?? false;
+  }
+
+  // Add method to resend verification email
+  Future<void> resendVerificationEmail() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+        Fluttertoast.showToast(
+          msg: "Verification email resent. Please check your inbox.",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.green,
+          textColor: Colors.white,
+          fontSize: 14.0,
+        );
+      }
+    } catch (e) {
+      logger.e('Email verification error:',
+          error: e, stackTrace: StackTrace.current);
+      Fluttertoast.showToast(
+        msg: "Failed to send verification email. Please try again later.",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
         textColor: Colors.white,
         fontSize: 14.0,
       );
@@ -77,14 +131,85 @@ class AuthService {
     required BuildContext context,
   }) async {
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+
+      // Check if email is verified
+      if (!userCredential.user!.emailVerified) {
+        await FirebaseAuth.instance.signOut(); // Sign out if email not verified
+        Fluttertoast.showToast(
+          msg: "Please verify your email before logging in. Check your inbox.",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.orange,
+          textColor: Colors.white,
+          fontSize: 14.0,
+        );
+
+        // Add option to resend verification email
+        bool? resendEmail = await showDialog<bool>(
+          // ignore: use_build_context_synchronously
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              backgroundColor: Colors.grey[900],
+              title: const Text('Email Not Verified',
+                  style: TextStyle(color: Colors.white)),
+              content: const Text(
+                'Would you like to resend the verification email?',
+                style: TextStyle(color: Colors.white70),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel',
+                      style: TextStyle(color: Colors.grey)),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child:
+                      const Text('Resend', style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            );
+          },
+        );
+
+        if (resendEmail == true) {
+          await userCredential.user?.sendEmailVerification();
+          Fluttertoast.showToast(
+            msg: "Verification email resent. Please check your inbox.",
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+            backgroundColor: Colors.green,
+            textColor: Colors.white,
+            fontSize: 14.0,
+          );
+        }
+        return;
+      }
+
+      // If email is verified, proceed with login
       // ignore: use_build_context_synchronously
       context.go('/home');
-    } catch (e) {
-      // ... existing error handling ...
+    } on FirebaseAuthException catch (e) {
+      String message = 'An error occurred during sign in';
+      if (e.code == 'user-not-found') {
+        message = 'No user found for that email.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Wrong password provided for that user.';
+      }
+      Fluttertoast.showToast(
+        msg: message,
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 14.0,
+      );
     }
   }
 
@@ -187,6 +312,39 @@ class AuthService {
       logger.e('Upload profile image error:',
           error: e, stackTrace: StackTrace.current);
       rethrow;
+    }
+  }
+
+  // Add this method to AuthService class
+  Future<void> resetPassword({
+    required String email,
+    required BuildContext context,
+  }) async {
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+
+      // Show success message
+      Fluttertoast.showToast(
+        msg: "Password reset email sent. Please check your inbox.",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+        fontSize: 14.0,
+      );
+    } on FirebaseAuthException catch (e) {
+      String message = 'An error occurred';
+      if (e.code == 'user-not-found') {
+        message = 'No user found for that email.';
+      }
+      Fluttertoast.showToast(
+        msg: message,
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 14.0,
+      );
     }
   }
 }

@@ -6,13 +6,19 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 
+class Login extends StatefulWidget {
+  // Change to StatefulWidget
+  const Login({super.key});
 
-class Login extends StatelessWidget {
-  Login({super.key});
+  @override
+  State<Login> createState() => _LoginState();
+}
 
+class _LoginState extends State<Login> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final AuthService _authService = AuthService(); // AuthService példányosítása
+  final AuthService _authService = AuthService();
+  bool _isPasswordVisible = false; // Add this variable
 
   @override
   Widget build(BuildContext context) {
@@ -39,9 +45,11 @@ class Login extends StatelessWidget {
             body: SafeArea(
               child: Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center, // Tartalom középre igazítása
+                    mainAxisAlignment:
+                        MainAxisAlignment.center, // Tartalom középre igazítása
                     children: [
                       Text(
                         'Log in',
@@ -53,11 +61,14 @@ class Login extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 40), // Kisebb távolság a cím és a mezők között
+                      const SizedBox(
+                          height:
+                              40), // Kisebb távolság a cím és a mezők között
                       _emailAddress(),
                       const SizedBox(height: 20),
                       _password(),
-                      const SizedBox(height: 30), // Kisebb távolság a mezők és a gomb között
+                      _forgotPassword(), // Add this line
+                      const SizedBox(height: 20), // Reduced from 30 to 20
                       _combinedLoginButtons(context), // Kombinált gomb
                     ],
                   ),
@@ -90,7 +101,8 @@ class Login extends StatelessWidget {
           width: 300, // Szélesség csökkentése
           child: TextField(
             controller: _emailController,
-            style: const TextStyle(color: Colors.white), // Fehér szöveg a beviteli mezőben
+            style: const TextStyle(
+                color: Colors.white), // Fehér szöveg a beviteli mezőben
             decoration: InputDecoration(
               filled: true,
               fillColor: Colors.grey[900], // Sötétszürke háttér
@@ -99,8 +111,10 @@ class Login extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
               ),
               hintText: 'Enter your email', // Placeholder szöveg
-              hintStyle: const TextStyle(color: Colors.grey), // Szürke placeholder
-              contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16), // Kisebb padding
+              hintStyle:
+                  const TextStyle(color: Colors.grey), // Szürke placeholder
+              contentPadding: const EdgeInsets.symmetric(
+                  vertical: 14, horizontal: 16), // Kisebb padding
             ),
           ),
         ),
@@ -127,9 +141,10 @@ class Login extends StatelessWidget {
         SizedBox(
           width: 300, // Szélesség csökkentése
           child: TextField(
-            obscureText: true,
+            obscureText: !_isPasswordVisible, // Toggle visibility
             controller: _passwordController,
-            style: const TextStyle(color: Colors.white), // Fehér szöveg a beviteli mezőben
+            style: const TextStyle(
+                color: Colors.white), // Fehér szöveg a beviteli mezőben
             decoration: InputDecoration(
               filled: true,
               fillColor: Colors.grey[900], // Sötétszürke háttér
@@ -138,8 +153,22 @@ class Login extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
               ),
               hintText: 'Enter your password', // Placeholder szöveg
-              hintStyle: const TextStyle(color: Colors.grey), // Szürke placeholder
-              contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16), // Kisebb padding
+              hintStyle:
+                  const TextStyle(color: Colors.grey), // Szürke placeholder
+              contentPadding: const EdgeInsets.symmetric(
+                  vertical: 14, horizontal: 16), // Kisebb padding
+              suffixIcon: IconButton(
+                // Add eye icon
+                icon: Icon(
+                  _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                  color: Colors.grey,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _isPasswordVisible = !_isPasswordVisible;
+                  });
+                },
+              ),
             ),
           ),
         ),
@@ -201,7 +230,7 @@ class Login extends StatelessWidget {
             width: 150, // A jobb oldali rész szélessége
             child: GestureDetector(
               onTap: () {
-                context.go('/home'); 
+                context.go('/home');
               },
               child: Container(
                 decoration: BoxDecoration(
@@ -259,10 +288,88 @@ class Login extends StatelessWidget {
               ),
               recognizer: TapGestureRecognizer()
                 ..onTap = () {
-                  context.go('/signup'); 
+                  context.go('/signup');
                 },
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // Add this method to _LoginState class
+  Widget _forgotPassword() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 8.0, left: 24),
+        child: GestureDetector(
+          onTap: () {
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                final emailController = TextEditingController();
+                return AlertDialog(
+                  backgroundColor: Colors.grey[900],
+                  title: const Text(
+                    'Reset Password',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Enter your email address to reset your password',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: emailController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.grey[800],
+                          border: OutlineInputBorder(
+                            borderSide: BorderSide.none,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          hintText: 'Email',
+                          hintStyle: const TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel',
+                          style: TextStyle(color: Colors.grey)),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        _authService.resetPassword(
+                          email: emailController.text,
+                          context: context,
+                        );
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Reset',
+                          style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+          child: Text(
+            'Forgot Password?',
+            style: GoogleFonts.raleway(
+              textStyle: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+          ),
         ),
       ),
     );

@@ -47,8 +47,13 @@ class _SpeedMeterState extends State<SpeedMeter>
 class MeterPainter extends CustomPainter {
   final double speed;
   final bool isKmh;
+  final bool hasGpsSignal;
 
-  MeterPainter(this.speed, {this.isKmh = true});
+  MeterPainter(
+    this.speed, {
+    this.isKmh = true,
+    this.hasGpsSignal = true,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -114,13 +119,15 @@ class MeterPainter extends CustomPainter {
     canvas.drawArc(largeRect, angleToRadian(135), speedAngle, false,
         thickPaint..color = Colors.pink);
 
-    // Update speed display
-    final speedText = isKmh ? speed.toInt() : (speed * 0.621371).toInt();
+    // Update speed display with GPS signal check
+    final displayText = hasGpsSignal
+        ? "${isKmh ? speed.toInt() : (speed * 0.621371).toInt()}"
+        : "-";
     final unitText = isKmh ? "km/h" : "mph";
 
     final tp = TextPainter(
         text: TextSpan(
-            text: "$speedText",
+            text: displayText,
             style: TextStyle(fontSize: 60, color: Colors.white),
             children: [
               TextSpan(

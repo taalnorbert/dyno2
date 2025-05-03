@@ -177,6 +177,7 @@ class _HomePageState extends State<HomePage> {
                       _speedProvider
                           .getCurrentSpeed(), // Használjuk az új getCurrentSpeed() metódust
                       isKmh: _speedProvider.isKmh,
+                      hasGpsSignal: _speedProvider.hasGpsSignal,
                     ),
                   ),
                 ),

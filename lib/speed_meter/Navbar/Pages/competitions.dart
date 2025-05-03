@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../providers/speed_provider.dart';
 
 class CompetitionsPage extends StatefulWidget {
   const CompetitionsPage({super.key});
@@ -8,8 +9,10 @@ class CompetitionsPage extends StatefulWidget {
 }
 
 class _CompetitionsPageState extends State<CompetitionsPage> {
+  final SpeedProvider _speedProvider = SpeedProvider();
   int _selectedLeaderboardType = 0; // 0: 0-100, 1: 100-200, 2: 1/4 mérföld
-  bool _showPersonalResults = false; // false: napi legjobbak, true: saját mérések
+  bool _showPersonalResults =
+      false; // false: napi legjobbak, true: saját mérések
 
   // Példa adatok a leaderboardhoz - napi legjobbak
   final List<List<Map<String, dynamic>>> _dailyBestData = [
@@ -48,8 +51,16 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
       {'username': 'FastLane', 'car': 'BMW M8', 'time': 7.1},
       {'username': 'BoostMode', 'car': 'Mercedes AMG E63S', 'time': 7.2},
       {'username': 'RevLimiter', 'car': 'Audi RS6', 'time': 7.3},
-      {'username': 'SpeedMachine', 'car': 'Tesla Model 3 Performance', 'time': 7.4},
-      {'username': 'QuarterMaster', 'car': 'Dodge Charger Hellcat', 'time': 7.5},
+      {
+        'username': 'SpeedMachine',
+        'car': 'Tesla Model 3 Performance',
+        'time': 7.4
+      },
+      {
+        'username': 'QuarterMaster',
+        'car': 'Dodge Charger Hellcat',
+        'time': 7.5
+      },
       {'username': 'RaceReady', 'car': 'Lexus LFA', 'time': 7.6},
       {'username': 'RoadWarrior', 'car': 'Maserati MC20', 'time': 7.7},
       {'username': 'DriftLord', 'car': 'Nissan 400Z', 'time': 7.8},
@@ -65,18 +76,42 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
       {'username': 'QuarterHero', 'car': 'Tesla Model S Plaid', 'time': 10.4},
       {'username': 'LineBreaker', 'car': 'McLaren 765LT', 'time': 10.5},
       {'username': 'SpeedVision', 'car': 'Ferrari F8', 'time': 10.6},
-      {'username': 'QuarterLegend', 'car': 'Lamborghini Huracan STO', 'time': 10.7},
+      {
+        'username': 'QuarterLegend',
+        'car': 'Lamborghini Huracan STO',
+        'time': 10.7
+      },
       {'username': 'TrackStar', 'car': 'Porsche 911 Turbo S', 'time': 10.8},
       {'username': 'SpeedRacer', 'car': 'Chevrolet Corvette C8', 'time': 10.9},
       {'username': 'PowerRush', 'car': 'Nissan GTR Nismo', 'time': 11.0},
       {'username': 'DragsterPro', 'car': 'BMW M4 Competition', 'time': 11.1},
       {'username': 'StripMaster', 'car': 'Audi RS7', 'time': 11.2},
-      {'username': 'NitroKing', 'car': 'Dodge Challenger Hellcat', 'time': 11.3},
-      {'username': 'LaunchControl', 'car': 'Mercedes AMG GT Black Series', 'time': 11.4},
-      {'username': 'LightSpeed', 'car': 'Ford Mustang Shelby GT500', 'time': 11.5},
-      {'username': 'QuarterSpecialist', 'car': 'Lexus RC F Track Edition', 'time': 11.6},
+      {
+        'username': 'NitroKing',
+        'car': 'Dodge Challenger Hellcat',
+        'time': 11.3
+      },
+      {
+        'username': 'LaunchControl',
+        'car': 'Mercedes AMG GT Black Series',
+        'time': 11.4
+      },
+      {
+        'username': 'LightSpeed',
+        'car': 'Ford Mustang Shelby GT500',
+        'time': 11.5
+      },
+      {
+        'username': 'QuarterSpecialist',
+        'car': 'Lexus RC F Track Edition',
+        'time': 11.6
+      },
       {'username': 'SpeedTrack', 'car': 'Jaguar F-Type R', 'time': 11.7},
-      {'username': 'DragProdigy', 'car': 'Chevrolet Camaro ZL1 1LE', 'time': 11.8},
+      {
+        'username': 'DragProdigy',
+        'car': 'Chevrolet Camaro ZL1 1LE',
+        'time': 11.8
+      },
       {'username': 'SprintStar', 'car': 'Subaru WRX STI', 'time': 11.9},
       {'username': 'MileStone', 'car': 'Porsche Cayman GT4', 'time': 12.0},
       {'username': 'RacerEdge', 'car': 'Toyota Supra', 'time': 12.1},
@@ -127,18 +162,18 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
     String baseTitle;
     switch (_selectedLeaderboardType) {
       case 0:
-        baseTitle = "0-100 km/h";
+        baseTitle = _speedProvider.isKmh ? "0-100 km/h" : "0-60 mph";
         break;
       case 1:
-        baseTitle = "100-200 km/h";
+        baseTitle = _speedProvider.isKmh ? "100-200 km/h" : "60-120 mph";
         break;
       case 2:
         baseTitle = "1/4 Mile";
         break;
       default:
-        baseTitle = "Versenyek";
+        baseTitle = "Competitions";
     }
-    
+
     return baseTitle;
   }
 
@@ -147,10 +182,29 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // Add listener to update UI when unit changes
+    _speedProvider.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    // Remove listener when widget is disposed
+    _speedProvider.removeListener(() {
+      if (mounted) setState(() {});
+    });
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_getLeaderboardTitle(),
+        title: Text(
+          _getLeaderboardTitle(),
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -162,8 +216,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
             onPressed: () {
               // Itt lehetne implementálni a dátumválasztást
               ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Mai nap adatait látod'))
-              );
+                  SnackBar(content: Text('Mai nap adatait látod')));
             },
           ),
         ],
@@ -290,9 +343,8 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
             margin: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
             child: ElevatedButton.icon(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Frissítve!'))
-                );
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text('Frissítve!')));
               },
               icon: Icon(Icons.refresh, color: Colors.black),
               label: Text(
@@ -319,6 +371,22 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
   Widget _buildCategoryButton(int index, String title) {
     final isSelected = _selectedLeaderboardType == index;
 
+    // Get correct button text based on unit
+    String buttonText;
+    switch (index) {
+      case 0:
+        buttonText = _speedProvider.isKmh ? "0-100" : "0-60";
+        break;
+      case 1:
+        buttonText = _speedProvider.isKmh ? "100-200" : "60-120";
+        break;
+      case 2:
+        buttonText = "1/4 Mile";
+        break;
+      default:
+        buttonText = title;
+    }
+
     return Expanded(
       child: InkWell(
         onTap: () {
@@ -333,7 +401,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            title,
+            buttonText,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: isSelected ? Colors.black : Colors.white,
@@ -379,18 +447,21 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
     Color? rankColor;
     if (!_showPersonalResults) {
       if (index == 0) {
-        rankColor = Colors.amber;  // Arany
+        rankColor = Colors.amber; // Arany
       } else if (index == 1) {
-        rankColor = Colors.grey[400];  // Ezüst
+        rankColor = Colors.grey[400]; // Ezüst
       } else if (index == 2) {
-        rankColor = Colors.brown[300];  // Bronz
+        rankColor = Colors.brown[300]; // Bronz
       }
     }
 
     return Container(
       margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       decoration: BoxDecoration(
-        color: index % 2 == 0 ? Colors.black.withOpacity(0.3) : Colors.transparent,
+        // ignore: deprecated_member_use
+        color:
+            // ignore: deprecated_member_use
+            index % 2 == 0 ? Colors.black.withOpacity(0.3) : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),
       padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -403,7 +474,8 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
               "${index + 1}.",
               style: TextStyle(
                 color: rankColor ?? Colors.white,
-                fontWeight: rankColor != null ? FontWeight.bold : FontWeight.normal,
+                fontWeight:
+                    rankColor != null ? FontWeight.bold : FontWeight.normal,
                 fontSize: rankColor != null ? 16 : 14,
               ),
             ),
@@ -416,7 +488,9 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
               item['username'],
               style: TextStyle(
                 color: _showPersonalResults ? Colors.amber : Colors.white,
-                fontWeight: rankColor != null || _showPersonalResults ? FontWeight.bold : FontWeight.normal,
+                fontWeight: rankColor != null || _showPersonalResults
+                    ? FontWeight.bold
+                    : FontWeight.normal,
               ),
               overflow: TextOverflow.ellipsis,
             ),

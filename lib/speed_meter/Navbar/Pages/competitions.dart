@@ -9,9 +9,10 @@ class CompetitionsPage extends StatefulWidget {
 
 class _CompetitionsPageState extends State<CompetitionsPage> {
   int _selectedLeaderboardType = 0; // 0: 0-100, 1: 100-200, 2: 1/4 mérföld
+  bool _showPersonalResults = false; // false: napi legjobbak, true: saját mérések
 
-  // Példa adatok a leaderboardhoz
-  final List<List<Map<String, dynamic>>> _leaderboardData = [
+  // Példa adatok a leaderboardhoz - napi legjobbak
+  final List<List<Map<String, dynamic>>> _dailyBestData = [
     // 0-100 adatok
     [
       {'username': 'SpeedDemon', 'car': 'BMW M4', 'time': 3.9},
@@ -83,18 +84,62 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
     ],
   ];
 
+  // Példa adatok a saját mérésekhez
+  final List<List<Map<String, dynamic>>> _personalData = [
+    // 0-100 adatok
+    [
+      {'username': 'Te', 'car': 'BMW M3', 'time': 4.3},
+      {'username': 'Te', 'car': 'BMW M3', 'time': 4.5},
+      {'username': 'Te', 'car': 'Audi S4', 'time': 4.7},
+      {'username': 'Te', 'car': 'BMW M3', 'time': 4.8},
+      {'username': 'Te', 'car': 'Mercedes C63 AMG', 'time': 5.0},
+      {'username': 'Te', 'car': 'BMW M3', 'time': 5.1},
+      {'username': 'Te', 'car': 'Audi S4', 'time': 5.2},
+    ],
+    // 100-200 adatok
+    [
+      {'username': 'Te', 'car': 'BMW M3', 'time': 7.2},
+      {'username': 'Te', 'car': 'BMW M3', 'time': 7.4},
+      {'username': 'Te', 'car': 'Audi S4', 'time': 7.6},
+      {'username': 'Te', 'car': 'BMW M3', 'time': 7.8},
+      {'username': 'Te', 'car': 'Mercedes C63 AMG', 'time': 8.0},
+    ],
+    // 1/4 mérföld adatok
+    [
+      {'username': 'Te', 'car': 'BMW M3', 'time': 11.2},
+      {'username': 'Te', 'car': 'BMW M3', 'time': 11.4},
+      {'username': 'Te', 'car': 'Audi S4', 'time': 11.7},
+      {'username': 'Te', 'car': 'Mercedes C63 AMG', 'time': 11.9},
+      {'username': 'Te', 'car': 'BMW M3', 'time': 12.1},
+    ],
+  ];
+
+  // Aktív adatok kiválasztása
+  List<Map<String, dynamic>> get _activeData {
+    if (_showPersonalResults) {
+      return _personalData[_selectedLeaderboardType];
+    } else {
+      return _dailyBestData[_selectedLeaderboardType];
+    }
+  }
 
   String _getLeaderboardTitle() {
+    String baseTitle;
     switch (_selectedLeaderboardType) {
       case 0:
-        return "0-100 km/h";
+        baseTitle = "0-100 km/h";
+        break;
       case 1:
-        return "100-200 km/h";
+        baseTitle = "100-200 km/h";
+        break;
       case 2:
-        return "1/4 Mile";
+        baseTitle = "1/4 Mile";
+        break;
       default:
-        return "Versenyek";
+        baseTitle = "Versenyek";
     }
+    
+    return baseTitle;
   }
 
   String _getTimeUnit() {
@@ -139,6 +184,22 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                 _buildCategoryButton(0, "0-100"),
                 _buildCategoryButton(1, "100-200"),
                 _buildCategoryButton(2, "1/4 Mile"),
+              ],
+            ),
+          ),
+
+          // Saját / Napi legjobbak választó
+          Container(
+            margin: EdgeInsets.only(bottom: 10, left: 16, right: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey[900],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildDataSourceButton(false, "Napi legjobbak"),
+                _buildDataSourceButton(true, "Saját mérések"),
               ],
             ),
           ),
@@ -203,14 +264,21 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
 
                   // Lista elemek
                   Expanded(
-                    child: ListView.builder(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      itemCount: _leaderboardData[_selectedLeaderboardType].length,
-                      itemBuilder: (context, index) {
-                        final item = _leaderboardData[_selectedLeaderboardType][index];
-                        return _buildLeaderboardItem(index, item);
-                      },
-                    ),
+                    child: _activeData.isEmpty
+                        ? Center(
+                            child: Text(
+                              "Nincs megjeleníthető adat",
+                              style: TextStyle(color: Colors.white70),
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                            itemCount: _activeData.length,
+                            itemBuilder: (context, index) {
+                              final item = _activeData[index];
+                              return _buildLeaderboardItem(index, item);
+                            },
+                          ),
                   ),
                 ],
               ),
@@ -277,28 +345,58 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
     );
   }
 
+  Widget _buildDataSourceButton(bool isPersonal, String title) {
+    final isSelected = _showPersonalResults == isPersonal;
+
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _showPersonalResults = isPersonal;
+          });
+        },
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.amber : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isSelected ? Colors.black : Colors.white,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildLeaderboardItem(int index, Map<String, dynamic> item) {
-    // Első három helyezett színei
+    // Első három helyezett színei - csak a napi legjobbaknál
     Color? rankColor;
-    if (index == 0) {
-      rankColor = Colors.amber;  // Arany
-    } else if (index == 1) {
-      rankColor = Colors.grey[400];  // Ezüst
-    } else if (index == 2) {
-      rankColor = Colors.brown[300];  // Bronz
+    if (!_showPersonalResults) {
+      if (index == 0) {
+        rankColor = Colors.amber;  // Arany
+      } else if (index == 1) {
+        rankColor = Colors.grey[400];  // Ezüst
+      } else if (index == 2) {
+        rankColor = Colors.brown[300];  // Bronz
+      }
     }
 
     return Container(
       margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       decoration: BoxDecoration(
-        // ignore: deprecated_member_use
         color: index % 2 == 0 ? Colors.black.withOpacity(0.3) : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),
       padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       child: Row(
         children: [
-          // Helyezés
+          // Helyezés vagy mérés száma
           SizedBox(
             width: 30,
             child: Text(
@@ -317,8 +415,8 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
             child: Text(
               item['username'],
               style: TextStyle(
-                color: Colors.white,
-                fontWeight: rankColor != null ? FontWeight.bold : FontWeight.normal,
+                color: _showPersonalResults ? Colors.amber : Colors.white,
+                fontWeight: rankColor != null || _showPersonalResults ? FontWeight.bold : FontWeight.normal,
               ),
               overflow: TextOverflow.ellipsis,
             ),

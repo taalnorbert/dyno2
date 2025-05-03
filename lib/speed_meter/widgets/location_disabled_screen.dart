@@ -19,7 +19,7 @@ class LocationDisabledScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             const Text(
-              "Helymeghatározás kikapcsolva",
+              "Location Services Disabled",
               style: TextStyle(
                 fontSize: 24,
                 color: Colors.white,
@@ -30,7 +30,7 @@ class LocationDisabledScreen extends StatelessWidget {
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 20),
               child: Text(
-                "Az alkalmazás használatához engedélyezd a helymeghatározást a beállításokban.",
+                "Please enable location services in settings to use this application.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
@@ -53,7 +53,7 @@ class LocationDisabledScreen extends StatelessWidget {
                 ),
               ),
               child: const Text(
-                "Beállítások megnyitása",
+                "Open Settings",
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -88,7 +88,7 @@ class LocationPermissionDeniedScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    "Helymeghatározás engedély megtagadva",
+                    "Location Permission Denied",
                     style: TextStyle(
                       fontSize: 24,
                       color: Colors.white,
@@ -99,7 +99,7 @@ class LocationPermissionDeniedScreen extends StatelessWidget {
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
-                      "Az alkalmazás használatához engedélyezned kell a helymeghatározást az alkalmazás beállításaiban.",
+                      "You need to allow location access in app settings to use this application.",
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
@@ -127,7 +127,7 @@ class LocationPermissionDeniedScreen extends StatelessWidget {
                           ),
                         ),
                         child: const Text(
-                          "Engedélyezés",
+                          "Allow Access",
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -151,7 +151,7 @@ class LocationPermissionDeniedScreen extends StatelessWidget {
                           ),
                         ),
                         child: const Text(
-                          "Beállítások",
+                          "Settings",
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,

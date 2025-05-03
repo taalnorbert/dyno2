@@ -143,12 +143,26 @@ class _MainScaffoldState extends State<MainScaffold> {
                 ),
                 onTap: () {
                   Navigator.pop(dialogContext);
-                  double speedThreshold = _speedProvider.isKmh ? 100.0 : 60.0;
-
-                  if (_speedProvider.currentSpeed >= speedThreshold) {
+                  if (_speedProvider.currentSpeed >=
+                      (_speedProvider.isKmh ? 100.0 : 60.0)) {
                     _showWarningMessage('high');
                   } else {
                     context.push('/hundred-to-twohundred');
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.straighten, color: Colors.white),
+                title: const Text(
+                  '1/4 Mile',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(dialogContext);
+                  if (_speedProvider.currentSpeed > 5.0) {
+                    _showWarningMessage('high');
+                  } else {
+                    context.push('/quarter-mile');
                   }
                 },
               ),

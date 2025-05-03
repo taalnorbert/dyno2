@@ -11,6 +11,7 @@ import '../login/login.dart';
 import '../speed_meter/profile_page.dart';
 import '../widgets/main_scaffold.dart';
 import '../signup/signup.dart';
+import '../speed_meter/Navbar/Pages/quarter_mile.dart';
 
 final GlobalKey<NavigatorState> _rootNavigator = GlobalKey(debugLabel: 'root');
 final GlobalKey<NavigatorState> _shellNavigator =
@@ -56,6 +57,10 @@ final router = GoRouter(
     GoRoute(
       path: '/hundred-to-twohundred',
       builder: (context, state) => const HundredToTwoHundred(),
+    ),
+    GoRoute(
+      path: '/quarter-mile',
+      builder: (context, state) => const QuarterMile(),
     ),
     ShellRoute(
       navigatorKey: _shellNavigator,

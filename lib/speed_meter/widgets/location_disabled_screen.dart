@@ -76,37 +76,6 @@ class LocationPermissionDeniedScreen extends StatelessWidget {
       backgroundColor: Colors.black,
       body: Column(
         children: [
-          // Warning banner at the top
-          Container(
-            width: double.infinity,
-            color: Colors.red,
-            padding: const EdgeInsets.only(
-              top: 40,
-              bottom: 16,
-              left: 16,
-              right: 16,
-            ),
-            child: const Row(
-              children: [
-                Icon(
-                  Icons.warning_amber_rounded,
-                  color: Colors.white,
-                  size: 24,
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Helymeghatározás letiltva',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
           Expanded(
             child: Center(
               child: Column(

@@ -6,6 +6,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:dyno2/speed_meter/Navbar/Pages/home.dart';
 import 'package:dyno2/widgets/main_scaffold.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 // Alkalmazás szövegek konstansai
 class AppStrings {
@@ -19,6 +21,8 @@ class AppStrings {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SharedPreferences.getInstance();
+
   WakelockPlus.enable();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,

@@ -84,16 +84,6 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void _toggleSpeedUnit() {
-    setState(() {
-      isKmh = !isKmh;
-    });
-  }
-
-  double _getSpeedInCurrentUnit(double speed) {
-    return isKmh ? speed : speed * 0.621371192;
-  }
-
   void _showHelpDialog() {
     showHelpDialog(context);
   }
@@ -107,32 +97,25 @@ class _HomePageState extends State<HomePage> {
             return AlertDialog(
               backgroundColor: Colors.grey[900],
               title: const Text(
-                'Beállítások',
+                'Settings',
                 style: TextStyle(color: Colors.white),
               ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Speed unit setting
+                  // Speed Unit Setting
                   ListTile(
                     title: const Text(
-                      'Sebesség mértékegység',
+                      'Speed Unit',
                       style: TextStyle(color: Colors.white),
                     ),
                     trailing: DropdownButton<bool>(
                       dropdownColor: Colors.grey[850],
-                      value: isKmh,
+                      value: _speedProvider.isKmh,
                       onChanged: (bool? newValue) {
                         if (newValue != null) {
-                          setState(() {
-                            isKmh = newValue;
-                          });
-                          if (mounted) {
-                            // Check if the parent widget is still mounted
-                            this.setState(() {
-                              isKmh = newValue;
-                            });
-                          }
+                          _speedProvider.setSpeedUnit(newValue);
+                          setState(() {});
                         }
                       },
                       items: const [
@@ -149,45 +132,25 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                   ),
-                  // Language button (inactive)
+                  // Information Button
                   ListTile(
                     title: const Text(
-                      'Nyelv',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    trailing: TextButton(
-                      onPressed: null, // Disabled for now
-                      child: const Text(
-                        'Magyar',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                  // Information button
-                  ListTile(
-                    title: const Text(
-                      'Információk',
+                      'Information',
                       style: TextStyle(color: Colors.white),
                     ),
                     trailing: IconButton(
-                      icon: const Icon(Icons.info_outline, color: Colors.blue),
+                      icon: const Icon(
+                        Icons.info_outline,
+                        color: Colors.blue,
+                      ),
                       onPressed: () {
-                        Navigator.pop(context);
-                        _showHelpDialog();
+                        Navigator.pop(context); // Close settings dialog
+                        _showHelpDialog(); // Show help dialog
                       },
                     ),
                   ),
                 ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    'Bezár',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
             );
           },
         );
@@ -209,12 +172,11 @@ class _HomePageState extends State<HomePage> {
                   duration: Duration(milliseconds: 300),
                   width: MediaQuery.sizeOf(context).width * 0.85,
                   height: MediaQuery.sizeOf(context).width * 0.85,
-                  child: GestureDetector(
-                    onTap: _toggleSpeedUnit,
-                    child: CustomPaint(
-                      painter: MeterPainter(
-                          _getSpeedInCurrentUnit(_speedProvider.currentSpeed),
-                          isKmh: isKmh),
+                  child: CustomPaint(
+                    painter: MeterPainter(
+                      _speedProvider
+                          .getCurrentSpeed(), // Használjuk az új getCurrentSpeed() metódust
+                      isKmh: _speedProvider.isKmh,
                     ),
                   ),
                 ),

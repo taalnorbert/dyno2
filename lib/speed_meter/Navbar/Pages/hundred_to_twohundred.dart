@@ -6,6 +6,7 @@ import '../../meter_painter.dart';
 import '../../widgets/Messages/warning_message.dart';
 import '../../widgets/Messages/success_message.dart';
 import '../../widgets/Messages/result_dialog.dart';
+import '../../../providers/speed_provider.dart';
 
 class HundredToTwoHundred extends StatefulWidget {
   const HundredToTwoHundred({super.key});
@@ -27,7 +28,7 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
   Timer? _measurementTimer;
   bool _waitingForSpeedToReachThreshold = false;
   StreamSubscription<Position>? _positionStreamSubscription;
-  bool isKmh = true; // Alapértelmezettként km/h-ban jelenik meg a sebesség
+  final SpeedProvider _speedProvider = SpeedProvider();
 
   @override
   void initState() {
@@ -69,31 +70,26 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
     });
   }
 
-  void _toggleSpeedUnit() {
-    setState(() {
-      isKmh = !isKmh;
-    });
-  }
-
   double _getSpeedInCurrentUnit(double speed) {
-    return isKmh ? speed : speed * 0.621371192;
+    return _speedProvider.isKmh ? speed : speed * 0.621371192;
   }
 
   void _updateSpeed(double speed) {
-    double newSpeed = speed * 3.6;
-    if (newSpeed != currentSpeed) {
-      setState(() {
-        currentSpeed = newSpeed;
-      });
-    }
+    // Convert speed from m/s to km/h
+    double speedKmh = speed * 3.6;
 
-    // Csak akkor induljon el a mérés, ha a mérés aktív
+    // Only start timer if measurement is active and we reach the threshold
     if (isMeasurementActive &&
         !_waitingForSpeedToReachThreshold &&
-        currentSpeed >= 103) {
+        speedKmh >= (_speedProvider.isKmh ? 100.0 : 60.0)) {
       _waitingForSpeedToReachThreshold = true;
       _startMeasurementTimer();
     }
+
+    // Show warning if speed is too high at start
+    setState(() {
+      showMovementTooHigh = speedKmh >= (_speedProvider.isKmh ? 100.0 : 60.0);
+    });
   }
 
   void _listenToLocationServiceStatus() {
@@ -109,17 +105,40 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
   }
 
   void _startMeasurement() {
+    // Check if speed is too high to start
+    double currentSpeedKmh = _speedProvider.getCurrentSpeed();
+    if (currentSpeedKmh >= (_speedProvider.isKmh ? 100.0 : 60.0)) {
+      setState(() {
+        showMovementTooHigh = true;
+      });
+
+      // Hide warning after 3 seconds
+      Future.delayed(Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            showMovementTooHigh = false;
+          });
+        }
+      });
+      return;
+    }
+
+    // Start measurement if speed is acceptable
     setState(() {
       isMeasurementActive = true;
       isMeasurementStarted = true;
       isTestButtonVisible = true;
       _waitingForSpeedToReachThreshold = false;
+      showMovementTooHigh = false;
     });
 
+    // Hide "Measurement started" message after 3 seconds
     Future.delayed(Duration(seconds: 3), () {
-      setState(() {
-        isMeasurementStarted = false;
-      });
+      if (mounted) {
+        setState(() {
+          isMeasurementStarted = false;
+        });
+      }
     });
   }
 
@@ -130,7 +149,8 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
 
     _measurementTimer =
         Timer.periodic(Duration(milliseconds: 100), (Timer timer) {
-      if (currentSpeed >= 200) {
+      double targetSpeed = _speedProvider.secondTargetSpeed;
+      if (_speedProvider.getCurrentSpeed() >= targetSpeed) {
         timer.cancel();
         _finishMeasurement();
       }
@@ -196,61 +216,57 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
       backgroundColor: Colors.black,
       body: Center(
         child: Stack(
-                children: [
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      AnimatedContainer(
-                        duration: Duration(milliseconds: 300),
-                        width: MediaQuery.sizeOf(context).width * 1,
-                        height: MediaQuery.sizeOf(context).width * 1,
-                        child: GestureDetector(
-                          onTap: _toggleSpeedUnit,
-                          child: CustomPaint(
-                            painter: MeterPainter(
-                                _getSpeedInCurrentUnit(currentSpeed),
-                                isKmh: isKmh),
-                          ),
-                        ),
-                      ),
-                      if (isMeasurementActive) ...[
-                        NoOutlineMeasurementButton(
-                          onPressed: _resetMeasurement,
-                          text: "Mégse",
-                          backgroundColor: Colors.red,
-                        ),
-                        if (isTestButtonVisible)
-                          NoOutlineMeasurementButton(
-                            onPressed: _startSpeedIncrease,
-                            text: "Teszt Sebesség Növelés",
-                            backgroundColor: Colors.blue,
-                          ),
-                      ],
-                    ],
+          children: [
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedContainer(
+                  duration: Duration(milliseconds: 300),
+                  width: MediaQuery.sizeOf(context).width * 1,
+                  height: MediaQuery.sizeOf(context).width * 1,
+                  child: CustomPaint(
+                    painter: MeterPainter(_getSpeedInCurrentUnit(currentSpeed),
+                        isKmh: _speedProvider.isKmh),
                   ),
-                  if (isMeasurementStarted)
-                    SuccessMessage(
-                      message: "A mérés elkezdődött!",
-                      icon: Icons.check,
-                      color: Color(0xFF0ca644),
-                      iconColor: Color(0xFF84D65A),
-                    ),
-                  if (showMovementWarning)
-                    WarningMessage(
-                      message: "A jármű mozgásban van!",
-                      icon: Icons.warning,
-                      color: Colors.orange,
-                      iconColor: Colors.white,
-                    ),
-                  if (showMovementTooHigh)
-                    WarningMessage(
-                      message: "100 km/h-t meghaladod!",
-                      icon: Icons.warning,
-                      color: Colors.orange,
-                      iconColor: Colors.white,
+                ),
+                if (isMeasurementActive) ...[
+                  NoOutlineMeasurementButton(
+                    onPressed: _resetMeasurement,
+                    text: "Mégse",
+                    backgroundColor: Colors.red,
+                  ),
+                  if (isTestButtonVisible)
+                    NoOutlineMeasurementButton(
+                      onPressed: _startSpeedIncrease,
+                      text: "Teszt Sebesség Növelés",
+                      backgroundColor: Colors.blue,
                     ),
                 ],
+              ],
+            ),
+            if (isMeasurementStarted)
+              SuccessMessage(
+                message: "A mérés elkezdődött!",
+                icon: Icons.check,
+                color: Color(0xFF0ca644),
+                iconColor: Color(0xFF84D65A),
               ),
+            if (showMovementWarning)
+              WarningMessage(
+                message: "A jármű mozgásban van!",
+                icon: Icons.warning,
+                color: Colors.orange,
+                iconColor: Colors.white,
+              ),
+            if (showMovementTooHigh)
+              WarningMessage(
+                message: "100 km/h-t meghaladod!",
+                icon: Icons.warning,
+                color: Colors.orange,
+                iconColor: Colors.white,
+              ),
+          ],
+        ),
       ),
     );
   }

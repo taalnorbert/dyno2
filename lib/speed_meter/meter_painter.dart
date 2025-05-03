@@ -8,14 +8,16 @@ class SpeedMeter extends StatefulWidget {
   State<SpeedMeter> createState() => _SpeedMeterState();
 }
 
-class _SpeedMeterState extends State<SpeedMeter> with SingleTickerProviderStateMixin {
+class _SpeedMeterState extends State<SpeedMeter>
+    with SingleTickerProviderStateMixin {
   late Animation<double> anim;
   late AnimationController ctrl;
 
   @override
   void initState() {
     super.initState();
-    ctrl = AnimationController(vsync: this, duration: Duration(milliseconds: 1500));
+    ctrl = AnimationController(
+        vsync: this, duration: Duration(milliseconds: 1500));
     anim = Tween<double>(begin: 0, end: 72).animate(ctrl);
     ctrl.forward();
   }
@@ -56,8 +58,10 @@ class MeterPainter extends CustomPainter {
     final centerY = h / 2;
 
     final center = Offset(centerX, centerY);
-    final rect = Rect.fromCenter(center: center, width: w * 0.7, height: h * 0.7);
-    final largeRect = Rect.fromCenter(center: center, width: w * 0.75, height: h * 0.75);
+    final rect =
+        Rect.fromCenter(center: center, width: w * 0.7, height: h * 0.7);
+    final largeRect =
+        Rect.fromCenter(center: center, width: w * 0.75, height: h * 0.75);
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
@@ -72,11 +76,6 @@ class MeterPainter extends CustomPainter {
 
     canvas.drawArc(rect, startAngle, sweepAngle, false, paint);
     canvas.drawArc(largeRect, startAngle, sweepAngle, false, thickPaint);
-
-    final percent = (speed / 200).clamp(0, 1);
-    final speedAngle = sweepAngle * percent;
-
-    canvas.drawArc(largeRect, startAngle, speedAngle, false, thickPaint..color = Colors.pink);
 
     final radius = w / 2;
 
@@ -93,16 +92,29 @@ class MeterPainter extends CustomPainter {
       final end = angleToOffset(center, angle, radius * 0.575);
       canvas.drawLine(start, end, paint);
 
+      // Calculate display number based on unit
+      final displayNumber = (i * (isKmh ? 20 : 12)).toString();
+
       final tp = TextPainter(
-          text: TextSpan(text: "${i * 20}", style: TextStyle(color: Colors.white)),
+          text: TextSpan(
+              text: displayNumber, style: TextStyle(color: Colors.white)),
           textDirection: TextDirection.ltr);
       tp.layout();
       final textOffset = angleToOffset(center, angle, radius * 0.5);
-      final centered = Offset(textOffset.dx - tp.width / 2, textOffset.dy - tp.height / 2);
+      final centered =
+          Offset(textOffset.dx - tp.width / 2, textOffset.dy - tp.height / 2);
       tp.paint(canvas, centered);
     }
 
-    // Sebességérték és mértékegység megjelenítése
+    // Modify the speed percentage calculation based on unit
+    final maxSpeed = isKmh ? 200.0 : 120.0;
+    final percent = (speed / maxSpeed).clamp(0, 1);
+    final speedAngle = angleToRadian(270) * percent;
+
+    canvas.drawArc(largeRect, angleToRadian(135), speedAngle, false,
+        thickPaint..color = Colors.pink);
+
+    // Update speed display
     final speedText = isKmh ? speed.toInt() : (speed * 0.621371).toInt();
     final unitText = isKmh ? "km/h" : "mph";
 
@@ -119,7 +131,8 @@ class MeterPainter extends CustomPainter {
         textAlign: TextAlign.center,
         textDirection: TextDirection.ltr);
     tp.layout();
-    final centered = Offset(center.dx - tp.width / 2, center.dy - tp.height / 2);
+    final centered =
+        Offset(center.dx - tp.width / 2, center.dy - tp.height / 2);
     tp.paint(canvas, centered);
   }
 

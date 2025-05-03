@@ -114,7 +114,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         return AlertDialog(
           backgroundColor: Colors.grey[900],
           title: const Text(
-            'Válassz mérést',
+            'Select Measurement',
             style: TextStyle(color: Colors.white),
           ),
           content: Column(
@@ -122,9 +122,9 @@ class _MainScaffoldState extends State<MainScaffold> {
             children: [
               ListTile(
                 leading: const Icon(Icons.speed_outlined, color: Colors.white),
-                title: const Text(
-                  '0-100',
-                  style: TextStyle(color: Colors.white),
+                title: Text(
+                  _speedProvider.isKmh ? '0-100' : '0-60',
+                  style: const TextStyle(color: Colors.white),
                 ),
                 onTap: () {
                   Navigator.pop(dialogContext);
@@ -137,15 +137,15 @@ class _MainScaffoldState extends State<MainScaffold> {
               ),
               ListTile(
                 leading: const Icon(Icons.timer_outlined, color: Colors.white),
-                title: const Text(
-                  '100-200',
-                  style: TextStyle(color: Colors.white),
+                title: Text(
+                  _speedProvider.isKmh ? '100-200' : '60-120',
+                  style: const TextStyle(color: Colors.white),
                 ),
                 onTap: () {
                   Navigator.pop(dialogContext);
-                  if (_speedProvider.currentSpeed < 95) {
-                    _showWarningMessage('low');
-                  } else if (_speedProvider.currentSpeed > 105) {
+                  double speedThreshold = _speedProvider.isKmh ? 100.0 : 60.0;
+
+                  if (_speedProvider.currentSpeed >= speedThreshold) {
                     _showWarningMessage('high');
                   } else {
                     context.push('/hundred-to-twohundred');

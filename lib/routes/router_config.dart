@@ -82,7 +82,7 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/dyno',
-          builder: (context, state) => const dynoscreen(),
+          builder: (context, state) => const DynoScreen(),
         ),
         GoRoute(
           path: '/laptime',

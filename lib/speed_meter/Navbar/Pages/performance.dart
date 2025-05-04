@@ -1,160 +1,410 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'dart:math';
+import 'package:fl_chart/fl_chart.dart';
 
-// ignore: camel_case_types
-class dynoscreen extends StatefulWidget {
-  const dynoscreen({super.key});
+class DynoScreen extends StatefulWidget {
+  const DynoScreen({super.key});
 
   @override
-  State<dynoscreen> createState() => _dynoscreenState();
+  State<DynoScreen> createState() => _DynoScreenState();
 }
 
-// ignore: camel_case_types
-class _dynoscreenState extends State<dynoscreen> {
-  final TextEditingController weightController = TextEditingController();
-  final TextEditingController rimSizeController = TextEditingController();
-  final TextEditingController tireSizeController = TextEditingController();
-  final TextEditingController accelerationTimeController =
-      TextEditingController();
-  final TextEditingController rpmAt100Controller = TextEditingController();
+class _DynoScreenState extends State<DynoScreen> {
+  final TextEditingController _weightController =
+      TextEditingController(text: '1500');
+  final TextEditingController _wheelRadiusController =
+      TextEditingController(text: '0.3');
 
-  // Új controller a fordulatszámhoz
-  int gearAt100 = 3; // Alapértelmezett: 3. fokozat
-  int vehicleType = 1; // Alapértelmezett: személyautó
+  // Mérési értékek
+  double _speed = 0.0;
+  double _previousSpeed = 0.0;
+  double _acceleration = 0.0;
+  double _maxHorsepower = 0.0;
+  double _maxTorque = 0.0;
+  DateTime? _lastSpeedUpdate;
 
-  double speed = 0.0;
-  double previousSpeed = 0.0;
-  double acceleration = 0.0;
-  double horsepower = 0.0;
-  double torque = 0.0;
-  DateTime? lastSpeedUpdate;
+  // Konfiguráció
+  static const Duration _measurementInterval = Duration(milliseconds: 200);
 
-  // Járműtípusok áttételi arányai (egyszerűsített)
-  final Map<int, List<double>> _gearRatios = {
-    1: [3.91, 2.39, 1.55, 1.16, 0.85], // Személyautó
-    2: [4.17, 2.64, 1.77, 1.27, 1.00], // SUV/terepjáró
-    3: [5.05, 2.97, 1.94, 1.34, 1.00], // Kisteherautó
-  };
+  // Grafikon adatok
+  final List<FlSpot> _horsepowerData = [];
+  final List<FlSpot> _torqueData = [];
+  int _measurementIndex = 0;
 
-  void _getSpeed() async {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    try {
-      Position position = await Geolocator.getCurrentPosition(
-          // ignore: deprecated_member_use
-          desiredAccuracy: LocationAccuracy.high);
-      DateTime now = DateTime.now();
+  // Állapotkezelés
+  Timer? _measurementTimer;
+  bool _isMeasuring = false;
+  bool _locationPermissionGranted = false;
 
-      if (!mounted) return;
-
-      if (lastSpeedUpdate != null) {
-        double timeDiff =
-            now.difference(lastSpeedUpdate!).inMilliseconds / 1000.0;
-        if (timeDiff > 0) {
-          acceleration = (position.speed - previousSpeed) / timeDiff;
-        }
-      }
-
-      setState(() {
-        previousSpeed = speed;
-        speed = position.speed;
-        lastSpeedUpdate = now;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text("Hiba a sebesség lekérése során: $e"),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+  @override
+  void initState() {
+    super.initState();
+    _checkLocationPermission();
   }
 
-  void _calculatePerformance() {
-    // Klasszikus számítás a régi kód alapján
-    if (weightController.text.isNotEmpty) {
-      double weight = double.tryParse(weightController.text) ?? 0.0;
-      if (weight > 0 && acceleration > 0) {
-        setState(() {
-          horsepower = (weight * acceleration * speed) / 745.7;
-          torque = horsepower * 5252 / max(speed, 1.0);
-        });
+  Future<void> _checkLocationPermission() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Ellenőrizzük, hogy a helymeghatározás szolgáltatás engedélyezve van-e
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (mounted) {
+        _showSnackBar(
+            'A helymeghatározás szolgáltatás ki van kapcsolva. Kérjük, kapcsolja be!');
+      }
+      return;
+    }
+
+    // Ellenőrizzük a helymeghatározás engedélyeket
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        if (mounted) {
+          _showSnackBar('A helymeghatározási engedélyek megtagadva');
+        }
         return;
       }
     }
 
-    // Újfajta számítás, 0-100-as gyorsulás alapján
-    if (weightController.text.isNotEmpty &&
-        accelerationTimeController.text.isNotEmpty &&
-        rpmAt100Controller.text.isNotEmpty) {
-      double weight = double.tryParse(weightController.text) ?? 0.0;
-      double accelerationTime =
-          double.tryParse(accelerationTimeController.text) ?? 0.0;
-      double rpmAt100 = double.tryParse(rpmAt100Controller.text) ?? 0.0;
+    if (permission == LocationPermission.deniedForever) {
+      if (mounted) {
+        _showSnackBar(
+            'A helymeghatározási engedélyek véglegesen megtagadva. Kérjük, engedélyezze a beállításokban.');
+      }
+      return;
+    }
 
-      if (weight > 0 && accelerationTime > 0 && rpmAt100 > 0) {
-        // 1. Nyomaték számítása a gyorsulási adatokból
-        // v = 100 km/h = 27.78 m/s
-        const velocity = 27.78; // m/s
-        final accelerationCalc = velocity / accelerationTime;
-        final force = weight * accelerationCalc;
+    setState(() {
+      _locationPermissionGranted = true;
+    });
+  }
 
-        // Becslés a kerék rádiuszára (átlagos személyautó)
-        double wheelRadius = 0.33; // méter (kb. egy 16" kerék sugara)
+  double get _vehicleWeight =>
+      double.tryParse(_weightController.text) ?? 1500.0;
+  double get _wheelRadius =>
+      double.tryParse(_wheelRadiusController.text) ?? 0.3;
 
-        // Ha megadták a felni és kerék méretet, akkor használjuk azt
-        if (rimSizeController.text.isNotEmpty &&
-            tireSizeController.text.isNotEmpty) {
-          double rimSize = double.tryParse(rimSizeController.text) ?? 0.0;
-          double tireSize = double.tryParse(tireSizeController.text) ?? 0.0;
+  void _startMeasurement() async {
+    if (_isMeasuring || !_locationPermissionGranted) return;
 
-          if (rimSize > 0 && tireSize > 0) {
-            // Átváltás colból méterbe (1 col = 0.0254 méter)
-            double rimSizeMeters = rimSize * 0.0254;
+    // Ellenőrizzük, hogy van-e érvényes súly és keréksugár megadva
+    if (_vehicleWeight <= 0) {
+      _showSnackBar('Kérjük, adjon meg érvényes járműsúlyt!');
+      return;
+    }
 
-            // Átváltás mm-ből méterbe és hozzáadás a felni méretéhez
-            double tireSizeMeters = tireSize / 1000;
+    if (_wheelRadius <= 0) {
+      _showSnackBar('Kérjük, adjon meg érvényes keréksugarat!');
+      return;
+    }
 
-            // Teljes kerék sugara
-            wheelRadius = (rimSizeMeters + tireSizeMeters) / 2;
+    setState(() {
+      _isMeasuring = true;
+      _horsepowerData.clear();
+      _torqueData.clear();
+      _measurementIndex = 0;
+      _maxHorsepower = 0.0;
+      _maxTorque = 0.0;
+      _speed = 0.0;
+      _previousSpeed = 0.0;
+      _acceleration = 0.0;
+      _lastSpeedUpdate = null;
+    });
+
+    // Kezdeti pozíció lekérése az összehasonlításhoz
+    try {
+      await _getSpeed();
+
+      _measurementTimer = Timer.periodic(_measurementInterval, (_) {
+        _getSpeed();
+      });
+    } catch (e) {
+      _stopMeasurement();
+      _showSnackBar('Hiba a mérés indításakor: $e');
+    }
+  }
+
+  void _stopMeasurement() {
+    _measurementTimer?.cancel();
+    setState(() {
+      _isMeasuring = false;
+    });
+  }
+
+  Future<void> _getSpeed() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        // ignore: deprecated_member_use
+        desiredAccuracy: LocationAccuracy.bestForNavigation,
+        // ignore: deprecated_member_use
+        timeLimit: const Duration(seconds: 2),
+      );
+
+      final DateTime now = DateTime.now();
+
+      if (!mounted) return;
+
+      // Sebesség m/s-ben
+      final double currentSpeed = position.speed;
+
+      // Ha van előző mérésünk, számítsuk ki a gyorsulást
+      if (_lastSpeedUpdate != null) {
+        final double timeDiff =
+            now.difference(_lastSpeedUpdate!).inMilliseconds / 1000.0;
+
+        if (timeDiff > 0) {
+          // Gyorsulás számítása m/s² mértékegységben
+          _acceleration = (currentSpeed - _previousSpeed) / timeDiff;
+
+          // Szűrjük a kiugró értékeket, ha irreális a gyorsulás
+          if (_acceleration.abs() > 15) {
+            // ~1.5G maximum
+            _acceleration = _previousSpeed > 0
+                ? (_previousSpeed * 0.2)
+                : // Előző sebesség alapján becsült érték
+                0.0;
           }
         }
-
-        // Alap nyomaték a keréknél
-        final wheelTorque = force * wheelRadius;
-
-        // Az áttételi arány figyelembevétele
-        final gearRatio = _gearRatios[vehicleType]![gearAt100 - 1];
-        final differentialRatio =
-            vehicleType == 1 ? 3.45 : (vehicleType == 2 ? 3.73 : 4.10);
-
-        // Becsült motor nyomaték
-        double calculatedTorque = wheelTorque / (gearRatio * differentialRatio);
-
-        // Hatásfok figyelembevétele (kb. 85%)
-        calculatedTorque = calculatedTorque / 0.85;
-
-        // 2. Lóerő számítása a nyomatékból és fordulatszámból
-        // P(W) = T(Nm) * ω(rad/s)
-        // ω(rad/s) = RPM * 2π / 60
-        final angularVelocity = (rpmAt100 * 2 * pi) / 60;
-        final powerWatts = calculatedTorque * angularVelocity;
-
-        // Átváltás lóerőre (1 LE ≈ 735.5 W)
-        double calculatedHorsepower = powerWatts / 735.5;
-
-        // Korrekciós tényező a jármű típusa alapján
-        final correctionFactor =
-            vehicleType == 1 ? 1.05 : (vehicleType == 2 ? 1.15 : 1.2);
-        calculatedHorsepower = calculatedHorsepower * correctionFactor;
-
-        setState(() {
-          torque = calculatedTorque;
-          horsepower = calculatedHorsepower;
-        });
       }
+
+      setState(() {
+        _previousSpeed = _speed;
+        _speed = currentSpeed;
+        _lastSpeedUpdate = now;
+      });
+
+      _calculatePerformance();
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar("Hiba a sebesség lekérése során: $e");
     }
+  }
+
+  void _calculatePerformance() {
+    // Csak pozitív gyorsulás és sebesség esetén számolunk
+    if (_acceleration <= 0 || _speed <= 0) return;
+
+    final double weight = _vehicleWeight; // kg
+    final double wheelRadius = _wheelRadius; // méter
+
+    // 1. Fizikai erő számítása (Newton) - F = m * a
+    final double force = weight * _acceleration;
+
+    // 2. Nyomaték számítása (Nm) - T = F * r
+    final double calcTorque = force * wheelRadius;
+
+    // 3. Szögsebesség (rad/s) - ω = v / r
+    final double angularVelocity = _speed / wheelRadius;
+
+    // 4. Mechanikai teljesítmény (Watt) - P = T * ω
+    final double powerWatts = calcTorque * angularVelocity;
+
+    // 5. Átváltás lóerőre (1 LE = 735.5 Watt)
+    final double hp = powerWatts / 735.5;
+
+    setState(() {
+      // Mérési adatok hozzáadása a grafikonhoz
+      _horsepowerData.add(FlSpot(_measurementIndex.toDouble(), hp));
+      _torqueData.add(FlSpot(_measurementIndex.toDouble(), calcTorque));
+      _measurementIndex++;
+
+      // Maximumok frissítése
+      if (hp > _maxHorsepower) _maxHorsepower = hp;
+      if (calcTorque > _maxTorque) _maxTorque = calcTorque;
+
+      // Mérés automatikus leállítása, ha a teljesítmény és a nyomaték is csökken
+      // és már van legalább 10 mérési pont
+      if (_horsepowerData.length > 10 &&
+          hp < _maxHorsepower * 0.7 &&
+          calcTorque < _maxTorque * 0.7) {
+        _stopMeasurement();
+      }
+    });
+  }
+
+  // Sebesség átváltása m/s-ről km/h-ra
+  double _getSpeedKmh() {
+    // 1 m/s = 3.6 km/h
+    return _speed * 3.6;
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  Widget _buildChart() {
+    return _horsepowerData.isEmpty
+        ? const Center(
+            child: Text(
+              'Indítsa el a mérést a grafikon megjelenítéséhez',
+              style: TextStyle(color: Colors.white70),
+            ),
+          )
+        : LineChart(
+            LineChartData(
+              minY: 0,
+              lineTouchData: LineTouchData(
+                touchTooltipData: LineTouchTooltipData(
+                  getTooltipItems: (touchedSpots) {
+                    return touchedSpots.map((spot) {
+                      final bool isHorsepower = spot.barIndex == 0;
+                      return LineTooltipItem(
+                        '${isHorsepower ? "Lóerő" : "Nyomaték"}: ${spot.y.toStringAsFixed(1)} ${isHorsepower ? "LE" : "Nm"}',
+                        TextStyle(
+                          color: isHorsepower ? Colors.green : Colors.orange,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    }).toList();
+                  },
+                ),
+              ),
+              lineBarsData: [
+                LineChartBarData(
+                  spots: _horsepowerData,
+                  isCurved: true,
+                  gradient: const LinearGradient(
+                    colors: [Colors.green, Colors.greenAccent],
+                  ),
+                  barWidth: 3,
+                  dotData: FlDotData(show: false),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    gradient: LinearGradient(
+                      colors: [
+                        // ignore: deprecated_member_use
+                        Colors.green.withOpacity(0.3),
+                        // ignore: deprecated_member_use
+                        Colors.green.withOpacity(0.0),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                ),
+                LineChartBarData(
+                  spots: _torqueData,
+                  isCurved: true,
+                  gradient: const LinearGradient(
+                    colors: [Colors.orange, Colors.orangeAccent],
+                  ),
+                  barWidth: 3,
+                  dotData: FlDotData(show: false),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    gradient: LinearGradient(
+                      colors: [
+                        // ignore: deprecated_member_use
+                        Colors.orange.withOpacity(0.3),
+                        // ignore: deprecated_member_use
+                        Colors.orange.withOpacity(0.0),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                ),
+              ],
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 40,
+                    getTitlesWidget: (value, meta) => Text(
+                      value.toInt().toString(),
+                      style:
+                          const TextStyle(color: Colors.white60, fontSize: 10),
+                    ),
+                  ),
+                ),
+                rightTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                bottomTitles: AxisTitles(
+                  axisNameWidget: const Text(
+                    'Mérési pont',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, meta) => Text(
+                      value.toInt().toString(),
+                      style:
+                          const TextStyle(color: Colors.white60, fontSize: 10),
+                    ),
+                    reservedSize: 30,
+                  ),
+                ),
+              ),
+              borderData: FlBorderData(
+                show: true,
+                border: Border.all(color: Colors.white24),
+              ),
+              gridData: FlGridData(
+                show: true,
+                horizontalInterval: 50,
+                getDrawingHorizontalLine: (value) => FlLine(
+                  color: Colors.white10,
+                  strokeWidth: 1,
+                ),
+                getDrawingVerticalLine: (value) => FlLine(
+                  color: Colors.white10,
+                  strokeWidth: 1,
+                ),
+              ),
+            ),
+          );
+  }
+
+  Widget _buildLegend() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _legendItem('Lóerő (LE)', Colors.green),
+        const SizedBox(width: 24),
+        _legendItem('Nyomaték (Nm)', Colors.orange),
+      ],
+    );
+  }
+
+  Widget _legendItem(String title, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          title,
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    _measurementTimer?.cancel();
+    _weightController.dispose();
+    _wheelRadiusController.dispose();
+    super.dispose();
   }
 
   @override
@@ -162,233 +412,272 @@ class _dynoscreenState extends State<dynoscreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text("Teljesítménymérés", style: TextStyle(color: Colors.white)),
+        title: const Text("Teljesítménymérés",
+            style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
-        iconTheme: IconThemeData(color: Colors.white),
+        elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("1. Járműadatok",
-                style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18)),
-            SizedBox(height: 10),
-
-            // Jármű típus választás
-            Text("Jármű típusa:", style: TextStyle(color: Colors.white)),
-            Row(
-              children: [
-                Radio(
-                  value: 1,
-                  groupValue: vehicleType,
-                  onChanged: (value) {
-                    setState(() {
-                      vehicleType = value as int;
-                    });
-                  },
-                  fillColor: WidgetStateProperty.all(Colors.white),
-                ),
-                Text('Személyautó', style: TextStyle(color: Colors.white)),
-                Radio(
-                  value: 2,
-                  groupValue: vehicleType,
-                  onChanged: (value) {
-                    setState(() {
-                      vehicleType = value as int;
-                    });
-                  },
-                  fillColor: WidgetStateProperty.all(Colors.white),
-                ),
-                Text('SUV/Terepjáró', style: TextStyle(color: Colors.white)),
-              ],
-            ),
-            Row(
-              children: [
-                Radio(
-                  value: 3,
-                  groupValue: vehicleType,
-                  onChanged: (value) {
-                    setState(() {
-                      vehicleType = value as int;
-                    });
-                  },
-                  fillColor: WidgetStateProperty.all(Colors.white),
-                ),
-                Text('Kisteher', style: TextStyle(color: Colors.white)),
-              ],
-            ),
-            SizedBox(height: 10),
-
-            TextField(
-              controller: weightController,
-              decoration: InputDecoration(
-                  labelText: "Autó súlya (kg)",
-                  filled: true,
-                  fillColor: Colors.white),
-              keyboardType: TextInputType.number,
-            ),
-            SizedBox(height: 10),
-
-            TextField(
-              controller: rimSizeController,
-              decoration: InputDecoration(
-                  labelText: "Felni mérete (col)",
-                  filled: true,
-                  fillColor: Colors.white),
-              keyboardType: TextInputType.number,
-            ),
-
-            TextField(
-              controller: tireSizeController,
-              decoration: InputDecoration(
-                  labelText: "Kerék mérete (mm)",
-                  filled: true,
-                  fillColor: Colors.white),
-              keyboardType: TextInputType.number,
-            ),
-
-            SizedBox(height: 20),
-            Text("2. Mérési adatok",
-                style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18)),
-            SizedBox(height: 10),
-
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _getSpeed,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: Text("Élő sebesség mérése"),
-                  ),
-                ),
-              ],
-            ),
-
-            SizedBox(height: 10),
-            Text("VAGY",
-                style: TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold)),
-            SizedBox(height: 10),
-
-            TextField(
-              controller: accelerationTimeController,
-              decoration: InputDecoration(
-                  labelText: "Gyorsulási idő 0-100 km/h (mp)",
-                  filled: true,
-                  fillColor: Colors.white),
-              keyboardType: TextInputType.number,
-            ),
-
-            TextField(
-              controller: rpmAt100Controller,
-              decoration: InputDecoration(
-                  labelText: "Fordulatszám 100 km/h-nál (RPM)",
-                  filled: true,
-                  fillColor: Colors.white),
-              keyboardType: TextInputType.number,
-            ),
-
-            // Fokozat 100 km/h-nál
-            DropdownButtonFormField<int>(
-              decoration: InputDecoration(
-                  labelText: 'Fokozat 100 km/h-nál',
-                  filled: true,
-                  fillColor: Colors.white),
-              value: gearAt100,
-              dropdownColor: Colors.white,
-              items: [
-                DropdownMenuItem(value: 1, child: Text('1. fokozat')),
-                DropdownMenuItem(value: 2, child: Text('2. fokozat')),
-                DropdownMenuItem(value: 3, child: Text('3. fokozat')),
-                DropdownMenuItem(value: 4, child: Text('4. fokozat')),
-                DropdownMenuItem(value: 5, child: Text('5. fokozat')),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  gearAt100 = value!;
-                });
-              },
-            ),
-
-            SizedBox(height: 20),
-
-            Text("Aktuális sebesség: ${speed.toStringAsFixed(2)} m/s",
-                style: TextStyle(color: Colors.white, fontSize: 16)),
-            SizedBox(height: 10),
-
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _calculatePerformance,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      padding: EdgeInsets.symmetric(vertical: 15),
-                    ),
-                    child: Text("TELJESÍTMÉNY KISZÁMÍTÁSA",
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            ),
-
-            SizedBox(height: 30),
-
-            Container(
-              padding: EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                color: Colors.grey[900],
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.blue, width: 2),
-              ),
-              child: Column(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Konfiguráció panel
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("MÉRÉSI EREDMÉNYEK",
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold)),
-                  SizedBox(height: 15),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("LÓERŐ:",
-                          style: TextStyle(color: Colors.white, fontSize: 16)),
-                      Text("${horsepower.toStringAsFixed(1)} HP",
+                  // Súly beállítás
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Jármű súlya (kg)",
                           style: TextStyle(
-                              color: Colors.green,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold)),
-                    ],
+                              color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _weightController,
+                          decoration: InputDecoration(
+                            hintText: "Pl.: 1500",
+                            filled: true,
+                            fillColor: Colors.grey.shade900,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14),
+                            hintStyle: TextStyle(color: Colors.grey.shade500),
+                          ),
+                          style: const TextStyle(color: Colors.white),
+                          keyboardType: TextInputType.number,
+                        ),
+                      ],
+                    ),
                   ),
-                  SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("NYOMATÉK:",
-                          style: TextStyle(color: Colors.white, fontSize: 16)),
-                      Text("${torque.toStringAsFixed(1)} Nm",
+                  const SizedBox(width: 16),
+                  // Kerék sugár beállítás
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Kerék sugara (m)",
                           style: TextStyle(
-                              color: Colors.orange,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold)),
-                    ],
+                              color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _wheelRadiusController,
+                          decoration: InputDecoration(
+                            hintText: "Pl.: 0.3",
+                            filled: true,
+                            fillColor: Colors.grey.shade900,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14),
+                            hintStyle: TextStyle(color: Colors.grey.shade500),
+                          ),
+                          style: const TextStyle(color: Colors.white),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+
+              // Mérés vezérlők
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _isMeasuring ? null : _startMeasurement,
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text("Mérés indítása"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: _isMeasuring ? _stopMeasurement : null,
+                    icon: const Icon(Icons.stop),
+                    label: const Text("Leállítás"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              // Jelenlegi sebesség kijelzése
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade900,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Aktuális sebesség:",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    RichText(
+                      text: TextSpan(
+                        text: _speed.toStringAsFixed(1),
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                        children: [
+                          const TextSpan(
+                            text: " m/s",
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontWeight: FontWeight.normal,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const TextSpan(
+                            text: " (≈ ",
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontWeight: FontWeight.normal,
+                              fontSize: 14,
+                            ),
+                          ),
+                          TextSpan(
+                            text: _getSpeedKmh().toStringAsFixed(1),
+                            style: const TextStyle(
+                              color: Colors.blue,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const TextSpan(
+                            text: " km/h)",
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontWeight: FontWeight.normal,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Grafikon terület
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade900,
+                    borderRadius: BorderRadius.circular(16),
+                    // ignore: deprecated_member_use
+                    border: Border.all(
+                        color: Colors.blue.withOpacity(0.3), width: 1),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      _buildLegend(),
+                      const SizedBox(height: 8),
+                      Expanded(child: _buildChart()),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Maximális értékek panel
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade900,
+                  borderRadius: BorderRadius.circular(16),
+                  // ignore: deprecated_member_use
+                  border:
+                      Border.all(color: Colors.blue.withOpacity(0.3), width: 1),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      "MAXIMÁLIS ÉRTÉKEK",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "Max Lóerő:",
+                          style: TextStyle(color: Colors.white, fontSize: 15),
+                        ),
+                        Text(
+                          "${_maxHorsepower.toStringAsFixed(1)} LE",
+                          style: const TextStyle(
+                            color: Colors.green,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "Max Nyomaték:",
+                          style: TextStyle(color: Colors.white, fontSize: 15),
+                        ),
+                        Text(
+                          "${_maxTorque.toStringAsFixed(1)} Nm",
+                          style: const TextStyle(
+                            color: Colors.orange,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

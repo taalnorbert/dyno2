@@ -7,6 +7,8 @@ import '../../widgets/Messages/warning_message.dart';
 import '../../widgets/Messages/success_message.dart';
 import '../../widgets/Messages/result_dialog.dart';
 import '../../../providers/speed_provider.dart';
+import '../../../services/auth_service.dart';
+import 'package:go_router/go_router.dart';
 
 class ZeroToHundred extends StatefulWidget {
   const ZeroToHundred({super.key});
@@ -28,6 +30,7 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
   DateTime? _startTime;
   Timer? _measurementTimer;
   bool _waitingForSpeedToReachThreshold = false;
+  bool _isMeasurementFinished = false; // Add this flag
 
   @override
   void initState() {
@@ -105,6 +108,8 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
       isMeasurementStarted = true;
       isTestButtonVisible = true;
       _waitingForSpeedToReachThreshold = false;
+      _isMeasurementFinished =
+          false; // Reset the flag when starting new measurement
     });
 
     Future.delayed(Duration(seconds: 3), () {
@@ -129,34 +134,78 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
   }
 
   void _finishMeasurement() {
-    if (_startTime != null && mounted) {
+    // Check if measurement is already finished
+    if (_startTime != null && mounted && !_isMeasurementFinished) {
+      // Set flag to prevent multiple saves
+      _isMeasurementFinished = true;
+
+      // Cancel all timers first
+      _measurementTimer?.cancel();
+      _speedIncreaseTimer?.cancel();
+
       final elapsedTime = DateTime.now().difference(_startTime!);
-      showResultAndReturnToHomePage(
-        context,
-        elapsedTime,
-        _speedProvider.firstTargetSpeed
-            .toInt(), // or secondTargetSpeed for 100-200
-        _resetMeasurement,
-      );
+      final timeInSeconds = elapsedTime.inMilliseconds / 1000.0;
+
+      // Save measurement to database
+      AuthService().saveMeasurement('zero-to-hundred', timeInSeconds).then((_) {
+        if (!mounted) return;
+
+        // Reset measurement state
+        setState(() {
+          isMeasurementActive = false;
+          _waitingForSpeedToReachThreshold = false;
+          isTestButtonVisible = false;
+        });
+
+        // Show result and return to home
+        if (mounted) {
+          showResultAndReturnToHomePage(
+            context,
+            elapsedTime,
+            _speedProvider.firstTargetSpeed.toInt(),
+            () {
+              if (mounted) {
+                context.go('/home');
+              }
+            },
+          );
+        }
+      }).catchError((error) {
+        // ignore: avoid_print
+        print('Error saving measurement: $error');
+        if (mounted) {
+          showResultAndReturnToHomePage(
+            context,
+            elapsedTime,
+            _speedProvider.firstTargetSpeed.toInt(),
+            () {
+              if (mounted) {
+                context.go('/home');
+              }
+            },
+          );
+        }
+      });
     }
   }
 
   void _resetMeasurement() {
-    if (!mounted) return; // Add early return if not mounted
+    if (!mounted) return;
 
     setState(() {
       isMeasurementActive = false;
       isMeasurementStarted = false;
       isTestButtonVisible = false;
       _waitingForSpeedToReachThreshold = false;
+      _isMeasurementFinished = false; // Reset the flag
     });
 
     _measurementTimer?.cancel();
     _measurementTimer = null;
 
-    // Only navigate if still mounted
+    // Replace Navigator.pop with context.go
     if (mounted) {
-      Navigator.pop(context);
+      context.go('/home'); // Navigate back to home using go_router
     }
   }
 

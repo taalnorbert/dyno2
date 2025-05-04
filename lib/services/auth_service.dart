@@ -444,4 +444,129 @@ class AuthService {
       showWarningMessage(context, message, Colors.red);
     }
   }
+
+  Future<String?> getSelectedCar() async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        return doc.data()?['selectedCar'] as String?;
+      }
+      return null;
+    } catch (e) {
+      logger.e('Get selected car error:',
+          error: e, stackTrace: StackTrace.current);
+      return null;
+    }
+  }
+
+  Future<void> updateSelectedCar(String car) async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'selectedCar': car,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+    } catch (e) {
+      logger.e('Update car error:', error: e, stackTrace: StackTrace.current);
+      rethrow;
+    }
+  }
+
+  Future<void> saveMeasurement(String type, double time) async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('measurements').add({
+          'userId': user.uid,
+          'type':
+              type, // 'zero-to-hundred', 'hundred-to-twohundred', 'quarter-mile'
+          'time': time,
+          'car': await getSelectedCar() ?? 'Unknown Car',
+          'date': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      logger.e('Save measurement error:',
+          error: e, stackTrace: StackTrace.current);
+      rethrow;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getUserMeasurements(String type) async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        // Debug the query parameters
+        // ignore: avoid_print
+        print('Querying measurements with userId: ${user.uid}, type: $type');
+
+        final snapshot = await FirebaseFirestore.instance
+            .collection('measurements')
+            .where('userId', isEqualTo: user.uid)
+            .where('type', isEqualTo: type)
+            .get();
+
+        // Debug what was found
+        // ignore: avoid_print
+        print('Found ${snapshot.docs.length} measurements for type $type');
+        for (var doc in snapshot.docs) {
+          // ignore: avoid_print
+          print('Measurement data: ${doc.data()}');
+        }
+
+        // If no results were found, try to fetch all user measurements to see what types exist
+        if (snapshot.docs.isEmpty) {
+          // ignore: avoid_print
+          print(
+              'No measurements found with type $type, checking all user measurements...');
+          final allUserMeasurements = await FirebaseFirestore.instance
+              .collection('measurements')
+              .where('userId', isEqualTo: user.uid)
+              .get();
+
+          // ignore: avoid_print
+          print(
+              'User has ${allUserMeasurements.docs.length} total measurements');
+          for (var doc in allUserMeasurements.docs) {
+            // ignore: avoid_print
+            print('Available measurement: ${doc.data()}');
+          }
+        }
+
+        return snapshot.docs
+            .map((doc) {
+              try {
+                return {
+                  'username':
+                      'Te', // Static "Te" text for your own measurements
+                  'car': doc.data().containsKey('car')
+                      ? doc.data()['car'] as String
+                      : 'Unknown Car',
+                  'time': doc.data().containsKey('time')
+                      ? (doc.data()['time'] as num).toDouble()
+                      : 0.0,
+                };
+              } catch (e) {
+                // ignore: avoid_print
+                print('Error mapping document: $e');
+                return null;
+              }
+            })
+            .where((map) => map != null)
+            .cast<Map<String, dynamic>>()
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error getting measurements: $e');
+      return [];
+    }
+  }
 }

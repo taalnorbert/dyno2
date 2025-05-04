@@ -7,7 +7,6 @@ import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 import 'package:go_router/go_router.dart';
 
-
 class ProfilePage extends StatefulWidget {
   final String userEmail;
   const ProfilePage({super.key, required this.userEmail});
@@ -20,19 +19,23 @@ class _ProfilePageState extends State<ProfilePage> {
   String? _nickname;
   bool _isEditingNickname = false;
   final _nicknameController = TextEditingController();
+  final _carController = TextEditingController(); // Add this
   String? _profileImageUrl;
   final _imagePicker = ImagePicker();
+  String? _selectedCar;
 
   @override
   void initState() {
     super.initState();
     _loadNickname();
     _loadProfileImage();
+    _loadSelectedCar(); // Add this
   }
 
   @override
   void dispose() {
     _nicknameController.dispose();
+    _carController.dispose(); // Add this
     super.dispose();
   }
 
@@ -79,9 +82,9 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 300, 
-        maxHeight: 300, 
-        imageQuality: 70, 
+        maxWidth: 300,
+        maxHeight: 300,
+        imageQuality: 70,
       );
 
       if (image == null) return;
@@ -99,7 +102,7 @@ class _ProfilePageState extends State<ProfilePage> {
       final base64Image = await AuthService().uploadProfileImage(imageFile);
 
       if (!mounted) return;
-      Navigator.pop(context); 
+      Navigator.pop(context);
 
       setState(() {
         _profileImageUrl = base64Image;
@@ -121,6 +124,105 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       );
     }
+  }
+
+  Future<void> _loadSelectedCar() async {
+    try {
+      final car = await AuthService().getSelectedCar();
+      setState(() {
+        _selectedCar = car;
+      });
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error loading car: $e');
+    }
+  }
+
+  Future<void> _updateSelectedCar(String car) async {
+    try {
+      await AuthService().updateSelectedCar(car);
+      setState(() {
+        _selectedCar = car;
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Car updated successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showCarSelectionDialog() {
+    _carController.text = _selectedCar ?? ''; // Set initial value
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[900],
+          title: const Row(
+            children: [
+              Icon(Icons.directions_car, color: Colors.blue),
+              SizedBox(width: 10),
+              Text(
+                'Select Car',
+                style: TextStyle(color: Colors.white),
+              ),
+            ],
+          ),
+          content: TextField(
+            controller: _carController, // Use the class property
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Enter car model',
+              hintStyle: TextStyle(color: Colors.grey[400]),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Colors.white54),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Colors.blue),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (_carController.text.isNotEmpty) {
+                  _updateSelectedCar(_carController.text);
+                  Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showDeleteConfirmationDialog(BuildContext context) {
@@ -173,11 +275,11 @@ class _ProfilePageState extends State<ProfilePage> {
                   await AuthService().deleteAccount();
 
                   if (!dialogContext.mounted) return;
-                  Navigator.pop(dialogContext); 
-                  Navigator.pop(dialogContext); 
+                  Navigator.pop(dialogContext);
+                  Navigator.pop(dialogContext);
 
                   if (!mounted) return;
-                  context.go('/login'); 
+                  context.go('/login');
                 } catch (e) {
                   if (!dialogContext.mounted) return;
                   Navigator.pop(dialogContext);
@@ -523,7 +625,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   Navigator.pop(dialogContext); // Close dialog
 
                   if (!mounted) return;
-                  context.go('/login'); 
+                  context.go('/login');
                 } catch (e) {
                   if (!dialogContext.mounted) return;
                   Navigator.pop(dialogContext);
@@ -728,6 +830,38 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
               const SizedBox(height: 30),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[900],
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.directions_car, color: Colors.blue),
+                    const SizedBox(width: 10),
+                    Text(
+                      _selectedCar ?? 'No car selected',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.edit,
+                        color: Colors.blue,
+                        size: 20,
+                      ),
+                      onPressed: _showCarSelectionDialog,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 30),
               // Action Buttons
               _buildActionButton(
                 icon: Icons.lock,
@@ -748,6 +882,13 @@ class _ProfilePageState extends State<ProfilePage> {
                 label: 'Kijelentkezés',
                 color: Colors.red,
                 onPressed: () => _showLogoutConfirmationDialog(context),
+              ),
+              const SizedBox(height: 15),
+              _buildActionButton(
+                icon: Icons.directions_car,
+                label: 'Select Car',
+                color: Colors.blue,
+                onPressed: _showCarSelectionDialog,
               ),
             ],
           ),

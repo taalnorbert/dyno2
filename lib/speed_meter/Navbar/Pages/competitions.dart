@@ -1,3 +1,4 @@
+import 'package:dyno2/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import '../../../providers/speed_provider.dart';
 
@@ -13,6 +14,8 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
   int _selectedLeaderboardType = 0; // 0: 0-100, 1: 100-200, 2: 1/4 mérföld
   bool _showPersonalResults =
       false; // false: napi legjobbak, true: saját mérések
+  List<Map<String, dynamic>>? _personalMeasurements;
+  bool _isLoading = false;
 
   // Példa adatok a leaderboardhoz - napi legjobbak
   final List<List<Map<String, dynamic>>> _dailyBestData = [
@@ -119,40 +122,10 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
     ],
   ];
 
-  // Példa adatok a saját mérésekhez
-  final List<List<Map<String, dynamic>>> _personalData = [
-    // 0-100 adatok
-    [
-      {'username': 'Te', 'car': 'BMW M3', 'time': 4.3},
-      {'username': 'Te', 'car': 'BMW M3', 'time': 4.5},
-      {'username': 'Te', 'car': 'Audi S4', 'time': 4.7},
-      {'username': 'Te', 'car': 'BMW M3', 'time': 4.8},
-      {'username': 'Te', 'car': 'Mercedes C63 AMG', 'time': 5.0},
-      {'username': 'Te', 'car': 'BMW M3', 'time': 5.1},
-      {'username': 'Te', 'car': 'Audi S4', 'time': 5.2},
-    ],
-    // 100-200 adatok
-    [
-      {'username': 'Te', 'car': 'BMW M3', 'time': 7.2},
-      {'username': 'Te', 'car': 'BMW M3', 'time': 7.4},
-      {'username': 'Te', 'car': 'Audi S4', 'time': 7.6},
-      {'username': 'Te', 'car': 'BMW M3', 'time': 7.8},
-      {'username': 'Te', 'car': 'Mercedes C63 AMG', 'time': 8.0},
-    ],
-    // 1/4 mérföld adatok
-    [
-      {'username': 'Te', 'car': 'BMW M3', 'time': 11.2},
-      {'username': 'Te', 'car': 'BMW M3', 'time': 11.4},
-      {'username': 'Te', 'car': 'Audi S4', 'time': 11.7},
-      {'username': 'Te', 'car': 'Mercedes C63 AMG', 'time': 11.9},
-      {'username': 'Te', 'car': 'BMW M3', 'time': 12.1},
-    ],
-  ];
-
   // Aktív adatok kiválasztása
   List<Map<String, dynamic>> get _activeData {
     if (_showPersonalResults) {
-      return _personalData[_selectedLeaderboardType];
+      return _personalMeasurements ?? [];
     } else {
       return _dailyBestData[_selectedLeaderboardType];
     }
@@ -188,6 +161,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
     _speedProvider.addListener(() {
       if (mounted) setState(() {});
     });
+    _loadPersonalMeasurements();
   }
 
   @override
@@ -198,6 +172,68 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
     });
     super.dispose();
   }
+
+  Future<void> _loadPersonalMeasurements() async {
+  setState(() {
+    _isLoading = true;
+    _personalMeasurements = []; // Initialize to empty array before loading
+  });
+
+  String measurementType;
+  switch (_selectedLeaderboardType) {
+    case 0:
+      measurementType = 'zero-to-hundred';
+      break;
+    case 1:
+      measurementType = 'hundred-to-twohundred';
+      break;
+    case 2:
+      measurementType = 'quarter-mile';
+      break;
+    default:
+      measurementType = 'zero-to-hundred';
+  }
+
+  try {
+    // Debug print the current user ID
+    final currentUser = AuthService().currentUser;
+    // ignore: avoid_print
+    print('Current user ID: ${currentUser?.uid}');
+    
+    // Debug print the measurement type we're looking for
+    // ignore: avoid_print
+    print('Loading measurements for type: $measurementType');
+    
+    final measurements = await AuthService().getUserMeasurements(measurementType);
+    
+    // Debug print the results
+    // ignore: avoid_print
+    print('Received ${measurements.length} measurements from AuthService');
+    for (var m in measurements) {
+      // ignore: avoid_print
+      print('Measurement data: $m');
+    }
+    
+    // Update state with the measurements, even if empty
+    setState(() {
+      _personalMeasurements = measurements;
+      _isLoading = false;
+    });
+    
+    // For debugging, let's also print the current state of _activeData
+    // ignore: avoid_print
+    print('Active data length after loading: ${_activeData.length}');
+  } catch (e) {
+    // ignore: avoid_print
+    print('Error loading measurements: $e');
+    setState(() {
+      _personalMeasurements = [];
+      _isLoading = false;
+    });
+  }
+}
+
+// Update this getter to provide better debug information
 
   @override
   Widget build(BuildContext context) {
@@ -317,21 +353,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
 
                   // Lista elemek
                   Expanded(
-                    child: _activeData.isEmpty
-                        ? Center(
-                            child: Text(
-                              "Nincs megjeleníthető adat",
-                              style: TextStyle(color: Colors.white70),
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: EdgeInsets.symmetric(vertical: 8),
-                            itemCount: _activeData.length,
-                            itemBuilder: (context, index) {
-                              final item = _activeData[index];
-                              return _buildLeaderboardItem(index, item);
-                            },
-                          ),
+                    child: _buildLeaderboard(),
                   ),
                 ],
               ),
@@ -339,30 +361,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
           ),
 
           // Frissítés gomb
-          Container(
-            margin: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(SnackBar(content: Text('Frissítve!')));
-              },
-              icon: Icon(Icons.refresh, color: Colors.black),
-              label: Text(
-                "Frissítés",
-                style: TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber,
-                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-            ),
-          ),
+          _buildRefreshButton(),
         ],
       ),
     );
@@ -371,7 +370,6 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
   Widget _buildCategoryButton(int index, String title) {
     final isSelected = _selectedLeaderboardType == index;
 
-    // Get correct button text based on unit
     String buttonText;
     switch (index) {
       case 0:
@@ -393,6 +391,10 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
           setState(() {
             _selectedLeaderboardType = index;
           });
+          // Azonnal töltsük be az új méréseket kategóriaváltáskor
+          if (_showPersonalResults) {
+            _loadPersonalMeasurements();
+          }
         },
         child: Container(
           padding: EdgeInsets.symmetric(vertical: 12),
@@ -422,6 +424,9 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
           setState(() {
             _showPersonalResults = isPersonal;
           });
+          if (isPersonal) {
+            _loadPersonalMeasurements();
+          }
         },
         child: Container(
           padding: EdgeInsets.symmetric(vertical: 12),
@@ -521,6 +526,62 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLeaderboard() {
+    if (_isLoading) {
+      return Center(
+        child: CircularProgressIndicator(
+          color: Colors.amber,
+        ),
+      );
+    }
+
+    if (_showPersonalResults && (_personalMeasurements?.isEmpty ?? true)) {
+      return Center(
+        child: Text(
+          "Még nincsenek mérési eredményeid",
+          style: TextStyle(color: Colors.white70),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      itemCount: _activeData.length,
+      itemBuilder: (context, index) {
+        final item = _activeData[index];
+        return _buildLeaderboardItem(index, item);
+      },
+    );
+  }
+
+  Widget _buildRefreshButton() {
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      child: ElevatedButton.icon(
+        onPressed: () {
+          if (_showPersonalResults) {
+            _loadPersonalMeasurements();
+          }
+        },
+        icon: Icon(Icons.refresh, color: Colors.black),
+        label: Text(
+          "Frissítés",
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.amber,
+          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+        ),
       ),
     );
   }

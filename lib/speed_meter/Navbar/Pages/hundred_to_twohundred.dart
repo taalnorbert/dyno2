@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:dyno2/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import '../../widgets/buttons/measurement_button.dart';
 import '../../meter_painter.dart';
 import '../../widgets/Messages/warning_message.dart';
@@ -29,6 +31,7 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
   bool _waitingForSpeedToReachThreshold = false;
   StreamSubscription<Position>? _positionStreamSubscription;
   final SpeedProvider _speedProvider = SpeedProvider();
+  bool _isMeasurementFinished = false;
 
   @override
   void initState() {
@@ -129,7 +132,8 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
       isMeasurementStarted = true;
       isTestButtonVisible = true;
       _waitingForSpeedToReachThreshold = false;
-      showMovementTooHigh = false;
+      _isMeasurementFinished =
+          false; // Reset flag when starting new measurement
     });
 
     // Hide "Measurement started" message after 3 seconds
@@ -158,10 +162,61 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
   }
 
   void _finishMeasurement() {
-    if (_startTime != null) {
+    if (_startTime != null && mounted && !_isMeasurementFinished) {
+      _isMeasurementFinished = true; // Set flag to prevent multiple saves
+
+      // Cancel all timers first
+      _measurementTimer?.cancel();
+      _speedIncreaseTimer?.cancel();
+      _positionStreamSubscription?.cancel();
+
       final elapsedTime = DateTime.now().difference(_startTime!);
-      showResultAndReturnToHomePage(
-          context, elapsedTime, 200, _resetMeasurement);
+      final timeInSeconds = elapsedTime.inMilliseconds / 1000.0;
+
+      // Save measurement to database
+      AuthService()
+          .saveMeasurement('hundred-to-twohundred', timeInSeconds)
+          .then((_) {
+        if (!mounted) return;
+
+        // Reset measurement state
+        setState(() {
+          isMeasurementActive = false;
+          _waitingForSpeedToReachThreshold = false;
+          isTestButtonVisible = false;
+          currentSpeed = 0.0;
+        });
+
+        // Check mounted again before showing dialog
+        if (mounted) {
+          showResultAndReturnToHomePage(
+            context,
+            elapsedTime,
+            _speedProvider.secondTargetSpeed.toInt(),
+            () {
+              if (mounted) {
+                context.go('/home');
+              }
+            },
+          );
+        }
+      }).catchError((error) {
+        // ignore: avoid_print
+        print('Error saving measurement: $error');
+
+        if (mounted) {
+          showResultAndReturnToHomePage(
+            context,
+            elapsedTime,
+            _speedProvider.secondTargetSpeed.toInt(),
+            () {
+              if (mounted) {
+                context.go('/home');
+              }
+            },
+          );
+        }
+      });
     }
   }
 
@@ -171,14 +226,14 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
       isMeasurementStarted = false;
       isTestButtonVisible = false;
       _waitingForSpeedToReachThreshold = false;
-      currentSpeed = 0.0;
+      _isMeasurementFinished = false; // Reset the flag
     });
 
     _measurementTimer?.cancel();
     _measurementTimer = null;
 
     // Opcionálisan visszatérés a Home oldalra
-    Navigator.pop(context);
+    context.go('/home');
   }
 
   void _startSpeedIncrease() {

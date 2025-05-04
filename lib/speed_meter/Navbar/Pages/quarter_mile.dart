@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:dyno2/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import '../../meter_painter.dart';
 import '../../widgets/buttons/measurement_button.dart';
 import '../../widgets/Messages/warning_message.dart';
@@ -26,6 +28,7 @@ class _QuarterMileState extends State<QuarterMile> {
   bool showMovementWarning = false;
   bool isTestButtonVisible = false;
   bool _measurementTimerStarted = false;
+  bool _isMeasurementFinished = false; // Add the flag to existing properties
   DateTime? _startTime;
   StreamSubscription<Position>? _positionStreamSubscription;
 
@@ -134,6 +137,8 @@ class _QuarterMileState extends State<QuarterMile> {
       _measurementTimerStarted = false;
       _distanceTraveled = 0.0;
       _startTime = null;
+      _isMeasurementFinished =
+          false; // Reset flag when starting new measurement
     });
 
     // Hide "Measurement started" message after 3 seconds
@@ -147,15 +152,58 @@ class _QuarterMileState extends State<QuarterMile> {
   }
 
   void _finishMeasurement() {
-    if (_startTime != null && mounted) {
+    if (_startTime != null && mounted && !_isMeasurementFinished) {
+      _isMeasurementFinished = true; // Set flag to prevent multiple saves
+
+      // Cancel subscription
+      _positionStreamSubscription?.cancel();
+
       final elapsedTime = DateTime.now().difference(_startTime!);
-      showResultAndReturnToHomePage(
-        context,
-        elapsedTime,
-        (_speedProvider.isKmh ? 402.336 : 402.336)
-            .toInt(), // Always show in meters
-        _resetMeasurement,
-      );
+      final timeInSeconds = elapsedTime.inMilliseconds / 1000.0;
+
+      // Save measurement to database
+      AuthService().saveMeasurement('quarter-mile', timeInSeconds).then((_) {
+        if (!mounted) return;
+
+        // Reset measurement state
+        setState(() {
+          isMeasurementActive = false;
+          _measurementTimerStarted = false;
+          isTestButtonVisible = false;
+          _distanceTraveled = 0.0;
+          _lastPosition = null;
+        });
+
+        // Check mounted again before showing dialog
+        if (mounted) {
+          showResultAndReturnToHomePage(
+            context,
+            elapsedTime,
+            (_speedProvider.isKmh ? 402.336 : 402.336).toInt(),
+            () {
+              if (mounted) {
+                context.go('/home');
+              }
+            },
+          );
+        }
+      }).catchError((error) {
+        // ignore: avoid_print
+        print('Error saving measurement: $error');
+
+        if (mounted) {
+          showResultAndReturnToHomePage(
+            context,
+            elapsedTime,
+            (_speedProvider.isKmh ? 402.336 : 402.336).toInt(),
+            () {
+              if (mounted) {
+                context.go('/home');
+              }
+            },
+          );
+        }
+      });
     }
   }
 
@@ -168,10 +216,11 @@ class _QuarterMileState extends State<QuarterMile> {
       _distanceTraveled = 0.0;
       _lastPosition = null;
       _startTime = null;
+      _isMeasurementFinished = false; // Reset the flag
     });
 
     if (mounted) {
-      Navigator.pop(context);
+      context.go('/home');
     }
   }
 

@@ -108,7 +108,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
 
     // Set up new real-time listener based on view type
     if (_showPersonalResults) {
-      // Listen to personal measurements - Ezt hagyjuk változatlanul
+      // For personal measurements, we need authentication
       final currentUser = AuthService().currentUser;
       if (currentUser != null) {
         _measurementsSubscription = FirebaseFirestore.instance
@@ -135,15 +135,24 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
             _isLoading = false;
           });
         });
+      } else {
+        // If trying to view personal results without being logged in,
+        // show login dialog (this case is already handled elsewhere)
+        setState(() {
+          _isLoading = false;
+        });
       }
     } else {
-      // Listen to daily top measurements - Itt kell a mai napra szűrni
-      // Számítsuk ki a mai nap kezdetét és végét
+      // For daily top measurements, show real data for all users
+      // (even if not logged in)
+      setState(() {
+        _isLoading = true;
+      });
+
       final now = DateTime.now();
       final startOfDay = DateTime(now.year, now.month, now.day);
       final endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
 
-      // Firestore timestamp-ekre konvertálás
       final startTimestamp = Timestamp.fromDate(startOfDay);
       final endTimestamp = Timestamp.fromDate(endOfDay);
 
@@ -169,69 +178,102 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
     try {
       final Map<String, Map<String, dynamic>> bestByUser = {};
 
+      // Create a list of Futures for fetching user data
+      final List<Future> userFetchFutures = [];
+
       for (var doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final userId = data['userId'] as String;
         final time = (data['time'] as num).toDouble();
+        final car = data['car'] ?? 'Unknown Car';
 
-        // Try to get user data
-        try {
+        // Create a Future for fetching this user's data
+        userFetchFutures.add(
           FirebaseFirestore.instance
               .collection('users')
               .doc(userId)
               .get()
               .then((userDoc) {
+            String username = 'Unknown User';
+
             if (userDoc.exists) {
               final userData = userDoc.data();
-              String username =
+              username =
                   userData?['nickname'] ?? userData?['email'] ?? 'Unknown User';
-
-              // Only update if this is better than existing result or first result
-              if (!bestByUser.containsKey(userId) ||
-                  time < bestByUser[userId]!['time']) {
-                final bool isCurrentUser =
-                    userId == AuthService().currentUser?.uid;
-
-                if (mounted) {
-                  setState(() {
-                    bestByUser[userId] = {
-                      'username': isCurrentUser ? 'Te' : username,
-                      'car': data['car'] ?? 'Unknown Car',
-                      'time': time,
-                      'isCurrentUser': isCurrentUser,
-                    };
-
-                    // Update the daily top measurements
-                    final List<Map<String, dynamic>> topMeasurements =
-                        bestByUser.values.toList()
-                          ..sort((a, b) => (a['time'] as double)
-                              .compareTo(b['time'] as double));
-                    _dailyTopMeasurements = topMeasurements.take(50).toList();
-                  });
-                }
-              }
             }
-          });
-        } catch (e) {
-          // ignore: avoid_print
-          print('Error fetching user data: $e');
-        }
+
+            // Only update if this is better than existing result or first result
+            if (!bestByUser.containsKey(userId) ||
+                time < bestByUser[userId]!['time']) {
+              // Check if this is the current user (will be false for non-logged in users)
+              final currentUser = AuthService().currentUser;
+              final bool isCurrentUser =
+                  currentUser != null && userId == currentUser.uid;
+
+              bestByUser[userId] = {
+                'username': isCurrentUser ? 'Te' : username,
+                'car': car,
+                'time': time,
+                'isCurrentUser': isCurrentUser,
+              };
+            }
+          }).catchError((e) {
+            // Don't override existing data with generated names
+            // Only add a fallback entry if we don't already have data for this user
+            if (!bestByUser.containsKey(userId)) {
+              bestByUser[userId] = {
+                'username': 'Unknown User',
+                'car': car,
+                'time': time,
+                'isCurrentUser': false,
+              };
+            }
+            // ignore: avoid_print
+            print('Error fetching user data: $e');
+          }),
+        );
       }
 
+      // Wait for all user data fetches to complete (whether successful or not)
+      await Future.wait(userFetchFutures);
+
+      if (!mounted) return;
+
+      // Update the daily top measurements after all data is collected
+      final List<Map<String, dynamic>> topMeasurements = bestByUser.values
+          .toList()
+        ..sort((a, b) => (a['time'] as double).compareTo(b['time'] as double));
+
       setState(() {
+        _dailyTopMeasurements = topMeasurements.take(50).toList();
         _isLoading = false;
       });
     } catch (e) {
       // ignore: avoid_print
       print('Error processing measurements: $e');
-      setState(() {
-        _dailyTopMeasurements = [];
-        _isLoading = false;
-      });
+
+      // If there's an error, we need to set _isLoading to false
+      if (mounted) {
+        setState(() {
+          _dailyTopMeasurements = [];
+          _isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _loadPersonalMeasurements() async {
+    // First check if user is logged in
+    final currentUser = AuthService().currentUser;
+    if (currentUser == null) {
+      setState(() {
+        _isLoading = false;
+        _personalMeasurements =
+            []; // Initialize to empty to trigger the "login required" UI
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _personalMeasurements = []; // Initialize to empty array before loading
@@ -254,9 +296,8 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
 
     try {
       // Debug print the current user ID
-      final currentUser = AuthService().currentUser;
       // ignore: avoid_print
-      print('Current user ID: ${currentUser?.uid}');
+      print('Current user ID: ${currentUser.uid}');
 
       // Debug print the measurement type we're looking for
       // ignore: avoid_print
@@ -273,6 +314,8 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
         print('Measurement data: $m');
       }
 
+      if (!mounted) return;
+
       // Update state with the measurements, even if empty
       setState(() {
         _personalMeasurements = measurements;
@@ -285,6 +328,9 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
     } catch (e) {
       // ignore: avoid_print
       print('Error loading measurements: $e');
+
+      if (!mounted) return;
+
       setState(() {
         _personalMeasurements = [];
         _isLoading = false;
@@ -472,55 +518,23 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
 
   Widget _buildDataSourceButton(bool isPersonal, String title) {
     final isSelected = _showPersonalResults == isPersonal;
-    final currentUser = AuthService().currentUser;
 
     return Expanded(
       child: InkWell(
         onTap: () {
-          if (isPersonal && currentUser == null) {
-            // Ha a saját mérésekre kattint és nincs bejelentkezve
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return AlertDialog(
-                  backgroundColor: _cardBlack,
-                  title: Text(
-                    'Bejelentkezés szükséges',
-                    style: TextStyle(color: _textWhite),
-                  ),
-                  content: Text(
-                    'A saját mérések megtekintéséhez jelentkezz be!',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        'Mégse',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        context.go('/login');
-                      },
-                      child: Text(
-                        'Bejelentkezés',
-                        style: TextStyle(color: _primaryRed),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            );
-            return;
-          }
-
+          // Allow switching to Personal tab even when not logged in
+          // This will show the login UI in the tab
           setState(() {
             _showPersonalResults = isPersonal;
           });
-          _startListeningToMeasurements();
+
+          // For personal tab, use _loadPersonalMeasurements which handles login UI
+          // For daily bests tab, use _startListeningToMeasurements even if not logged in
+          if (isPersonal) {
+            _loadPersonalMeasurements();
+          } else {
+            _startListeningToMeasurements();
+          }
         },
         child: Container(
           padding: EdgeInsets.symmetric(vertical: 12),
@@ -645,6 +659,53 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
   }
 
   Widget _buildLeaderboard() {
+    // Check if user is logged in and we're trying to view personal measurements
+    final currentUser = AuthService().currentUser;
+    // Only show login requirement for personal measurements
+    if (currentUser == null && _showPersonalResults) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.lock_outline,
+              size: 64,
+              color: Colors.grey[700],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Jelentkezz be a versenytáblák megtekintéséhez",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _textWhite,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "A versenytáblák csak bejelentkezett felhasználók számára érhetők el",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[400]),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => context.go('/login'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _primaryRed,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Bejelentkezés'),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (_isLoading || _activeData == null) {
       return Center(
         child: CircularProgressIndicator(

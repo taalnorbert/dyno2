@@ -510,47 +510,26 @@ class AuthService {
             .collection('measurements')
             .where('userId', isEqualTo: user.uid)
             .where('type', isEqualTo: type)
+            .orderBy('date',
+                descending: true) // Rendezés dátum szerint csökkenő sorrendben
             .get();
 
         // Debug what was found
         // ignore: avoid_print
         print('Found ${snapshot.docs.length} measurements for type $type');
-        for (var doc in snapshot.docs) {
-          // ignore: avoid_print
-          print('Measurement data: ${doc.data()}');
-        }
-
-        // If no results were found, try to fetch all user measurements to see what types exist
-        if (snapshot.docs.isEmpty) {
-          // ignore: avoid_print
-          print(
-              'No measurements found with type $type, checking all user measurements...');
-          final allUserMeasurements = await FirebaseFirestore.instance
-              .collection('measurements')
-              .where('userId', isEqualTo: user.uid)
-              .get();
-
-          // ignore: avoid_print
-          print(
-              'User has ${allUserMeasurements.docs.length} total measurements');
-          for (var doc in allUserMeasurements.docs) {
-            // ignore: avoid_print
-            print('Available measurement: ${doc.data()}');
-          }
-        }
 
         return snapshot.docs
             .map((doc) {
               try {
                 return {
-                  'username':
-                      'Te', // Static "Te" text for your own measurements
+                  'username': 'Te',
                   'car': doc.data().containsKey('car')
                       ? doc.data()['car'] as String
                       : 'Unknown Car',
                   'time': doc.data().containsKey('time')
                       ? (doc.data()['time'] as num).toDouble()
                       : 0.0,
+                  'date': doc.data()['date'],
                 };
               } catch (e) {
                 // ignore: avoid_print

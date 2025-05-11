@@ -18,7 +18,8 @@ class HundredToTwoHundred extends StatefulWidget {
 }
 
 class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
-  double currentSpeed = 0.0;
+  final SpeedProvider _speedProvider = SpeedProvider();
+
   bool isLocationServiceEnabled = true;
   bool isMeasurementActive = false;
   bool isMeasurementStarted = false;
@@ -29,8 +30,7 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
   DateTime? _startTime;
   Timer? _measurementTimer;
   bool _waitingForSpeedToReachThreshold = false;
-  StreamSubscription<Position>? _positionStreamSubscription;
-  final SpeedProvider _speedProvider = SpeedProvider();
+  StreamSubscription<ServiceStatus>? _serviceStatusSubscription;
   bool _isMeasurementFinished = false;
 
   @override
@@ -38,16 +38,38 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
     super.initState();
     _checkPermissionsAndStartListening();
     _listenToLocationServiceStatus();
+
+    // Add listener to SpeedProvider to get updates
+    _speedProvider.addListener(_onSpeedChanged);
+
     // Indítsa el automatikusan a mérést, amikor betöltődik az oldal
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startMeasurement();
     });
   }
 
+  void _onSpeedChanged() {
+    // This will be called whenever the speed changes in SpeedProvider
+
+    // Only start timer if measurement is active and we reach the threshold
+    if (isMeasurementActive &&
+        !_waitingForSpeedToReachThreshold &&
+        _speedProvider.getCurrentSpeed() >=
+            (_speedProvider.isKmh ? 105.0 : 65.0)) {
+      _waitingForSpeedToReachThreshold = true;
+      _startMeasurementTimer();
+    }
+
+    // Force widget refresh
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   void _checkPermissionsAndStartListening() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     setState(() {
-      isLocationServiceEnabled = serviceEnabled;
+      _speedProvider.isLocationServiceEnabled = serviceEnabled;
     });
 
     if (!serviceEnabled) {
@@ -62,44 +84,16 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
       }
     }
 
-    _positionStreamSubscription = Geolocator.getPositionStream(
-      locationSettings: AndroidSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-        intervalDuration: const Duration(milliseconds: 100),
-        distanceFilter: 0,
-      ),
-    ).listen((Position position) {
-      _updateSpeed(position.speed);
-    });
-  }
-
-  double _getSpeedInCurrentUnit(double speed) {
-    return _speedProvider.isKmh ? speed : speed * 0.621371192;
-  }
-
-  void _updateSpeed(double speed) {
-    // Convert speed from m/s to km/h
-    double speedKmh = speed * 3.6;
-
-    // Only start timer if measurement is active and we reach the threshold
-    if (isMeasurementActive &&
-        !_waitingForSpeedToReachThreshold &&
-        speedKmh >= (_speedProvider.isKmh ? 100.0 : 60.0)) {
-      _waitingForSpeedToReachThreshold = true;
-      _startMeasurementTimer();
-    }
-
-    // Show warning if speed is too high at start
-    setState(() {
-      showMovementTooHigh = speedKmh >= (_speedProvider.isKmh ? 100.0 : 60.0);
-    });
+    // Start tracking speed from the SpeedProvider
+    _speedProvider.startSpeedTracking();
   }
 
   void _listenToLocationServiceStatus() {
-    Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
+    _serviceStatusSubscription =
+        Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
       bool isEnabled = status == ServiceStatus.enabled;
       setState(() {
-        isLocationServiceEnabled = isEnabled;
+        _speedProvider.isLocationServiceEnabled = isEnabled;
       });
       if (isEnabled) {
         _checkPermissionsAndStartListening();
@@ -168,7 +162,6 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
       // Cancel all timers first
       _measurementTimer?.cancel();
       _speedIncreaseTimer?.cancel();
-      _positionStreamSubscription?.cancel();
 
       final elapsedTime = DateTime.now().difference(_startTime!);
       final timeInSeconds = elapsedTime.inMilliseconds / 1000.0;
@@ -184,7 +177,6 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
           isMeasurementActive = false;
           _waitingForSpeedToReachThreshold = false;
           isTestButtonVisible = false;
-          currentSpeed = 0.0;
         });
 
         // Check mounted again before showing dialog
@@ -237,23 +229,18 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
   }
 
   void _startSpeedIncrease() {
-    // 100-200 mérésnél 100 km/h-tól indulunk
-    setState(() {
-      currentSpeed = 103.0;
-    });
-
     const double targetSpeed = 200.0;
     const Duration interval = Duration(milliseconds: 100);
 
     _speedIncreaseTimer = Timer.periodic(interval, (Timer timer) {
-      setState(() {
-        if (currentSpeed < targetSpeed) {
-          currentSpeed += 1.0;
-        } else {
-          timer.cancel();
-          _finishMeasurement();
-        }
-      });
+      // Update the speed in SpeedProvider for testing purposes
+      _speedProvider
+          .updateSpeed((_speedProvider.currentSpeed / 3.6) + (1.0 / 3.6));
+
+      if (_speedProvider.currentSpeed >= targetSpeed) {
+        timer.cancel();
+        _finishMeasurement();
+      }
     });
   }
 
@@ -261,7 +248,8 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
   void dispose() {
     _speedIncreaseTimer?.cancel();
     _measurementTimer?.cancel();
-    _positionStreamSubscription?.cancel();
+    _serviceStatusSubscription?.cancel();
+    _speedProvider.removeListener(_onSpeedChanged);
     super.dispose();
   }
 
@@ -280,7 +268,7 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
                   width: MediaQuery.sizeOf(context).width * 1,
                   height: MediaQuery.sizeOf(context).width * 1,
                   child: CustomPaint(
-                    painter: MeterPainter(_getSpeedInCurrentUnit(currentSpeed),
+                    painter: MeterPainter(_speedProvider.getCurrentSpeed(),
                         isKmh: _speedProvider.isKmh),
                   ),
                 ),
@@ -315,7 +303,7 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
               ),
             if (showMovementTooHigh)
               WarningMessage(
-                message: "100 km/h-t meghaladod!",
+                message: "A sebesség túl magas!",
                 icon: Icons.warning,
                 color: Colors.orange,
                 iconColor: Colors.white,

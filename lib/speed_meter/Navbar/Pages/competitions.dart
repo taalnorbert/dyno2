@@ -1,6 +1,9 @@
 import 'package:dyno2/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../providers/speed_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
 
 class CompetitionsPage extends StatefulWidget {
   const CompetitionsPage({super.key});
@@ -12,122 +15,21 @@ class CompetitionsPage extends StatefulWidget {
 class _CompetitionsPageState extends State<CompetitionsPage> {
   final SpeedProvider _speedProvider = SpeedProvider();
   int _selectedLeaderboardType = 0; // 0: 0-100, 1: 100-200, 2: 1/4 mérföld
-  bool _showPersonalResults =
-      false; // false: napi legjobbak, true: saját mérések
+  bool _showPersonalResults = false;
   List<Map<String, dynamic>>? _personalMeasurements;
+  List<Map<String, dynamic>>? _dailyTopMeasurements;
   bool _isLoading = false;
-
-  // Példa adatok a leaderboardhoz - napi legjobbak
-  final List<List<Map<String, dynamic>>> _dailyBestData = [
-    // 0-100 adatok
-    [
-      {'username': 'SpeedDemon', 'car': 'BMW M4', 'time': 3.9},
-      {'username': 'RacerX', 'car': 'Audi RS7', 'time': 4.1},
-      {'username': 'NitroBoost', 'car': 'Mercedes AMG GT', 'time': 4.2},
-      {'username': 'DriftKing', 'car': 'Toyota Supra', 'time': 4.3},
-      {'username': 'ThunderBolt', 'car': 'Tesla Model S', 'time': 4.5},
-      {'username': 'FastLane', 'car': 'Porsche 911', 'time': 4.6},
-      {'username': 'RoadRunner', 'car': 'Lamborghini Huracan', 'time': 4.7},
-      {'username': 'TurboCharge', 'car': 'Ferrari 488', 'time': 4.8},
-      {'username': 'NightRider', 'car': 'Nissan GTR', 'time': 4.9},
-      {'username': 'BurnoutKing', 'car': 'Chevrolet Corvette', 'time': 5.0},
-      {'username': 'AsphaltLegend', 'car': 'Dodge Challenger', 'time': 5.1},
-      {'username': 'QuarterMile', 'car': 'Ford Mustang', 'time': 5.2},
-      {'username': 'TurboTom', 'car': 'Hyundai i30N', 'time': 5.3},
-      {'username': 'SpeedStar', 'car': 'Subaru WRX', 'time': 5.4},
-      {'username': 'DragRacer', 'car': 'Honda Civic Type R', 'time': 5.5},
-      {'username': 'LightSpeed', 'car': 'VW Golf R', 'time': 5.6},
-      {'username': 'PowerShift', 'car': 'Mazda MX-5', 'time': 5.7},
-      {'username': 'RacingBeast', 'car': 'Jaguar F-Type', 'time': 5.8},
-      {'username': 'MidnightRacer', 'car': 'Kia Stinger', 'time': 5.9},
-      {'username': 'SpeedHunter', 'car': 'Lexus RC F', 'time': 6.0},
-    ],
-    // 100-200 adatok
-    [
-      {'username': 'AeroDynamic', 'car': 'McLaren 720S', 'time': 6.1},
-      {'username': 'SpeedForce', 'car': 'Ferrari SF90', 'time': 6.3},
-      {'username': 'PistonHead', 'car': 'Lamborghini Aventador', 'time': 6.4},
-      {'username': 'SuperCharger', 'car': 'Bugatti Chiron', 'time': 6.5},
-      {'username': 'HighwayHero', 'car': 'Porsche Taycan', 'time': 6.7},
-      {'username': 'TopGear', 'car': 'Aston Martin DBS', 'time': 6.8},
-      {'username': 'TurboJet', 'car': 'Koenigsegg Jesko', 'time': 6.9},
-      {'username': 'FastLane', 'car': 'BMW M8', 'time': 7.1},
-      {'username': 'BoostMode', 'car': 'Mercedes AMG E63S', 'time': 7.2},
-      {'username': 'RevLimiter', 'car': 'Audi RS6', 'time': 7.3},
-      {
-        'username': 'SpeedMachine',
-        'car': 'Tesla Model 3 Performance',
-        'time': 7.4
-      },
-      {
-        'username': 'QuarterMaster',
-        'car': 'Dodge Charger Hellcat',
-        'time': 7.5
-      },
-      {'username': 'RaceReady', 'car': 'Lexus LFA', 'time': 7.6},
-      {'username': 'RoadWarrior', 'car': 'Maserati MC20', 'time': 7.7},
-      {'username': 'DriftLord', 'car': 'Nissan 400Z', 'time': 7.8},
-      {'username': 'SpeedDaemon', 'car': 'Chevrolet Camaro ZL1', 'time': 7.9},
-      {'username': 'BurnRubber', 'car': 'Ford Shelby GT500', 'time': 8.0},
-      {'username': 'DreamRide', 'car': 'Lotus Emira', 'time': 8.1},
-      {'username': 'PerformancePro', 'car': 'Alfa Romeo Giulia', 'time': 8.2},
-      {'username': 'SprintMaster', 'car': 'BMW M5', 'time': 8.3},
-    ],
-    // 1/4 mérföld adatok
-    [
-      {'username': 'DragKing', 'car': 'Dodge Demon', 'time': 10.2},
-      {'username': 'QuarterHero', 'car': 'Tesla Model S Plaid', 'time': 10.4},
-      {'username': 'LineBreaker', 'car': 'McLaren 765LT', 'time': 10.5},
-      {'username': 'SpeedVision', 'car': 'Ferrari F8', 'time': 10.6},
-      {
-        'username': 'QuarterLegend',
-        'car': 'Lamborghini Huracan STO',
-        'time': 10.7
-      },
-      {'username': 'TrackStar', 'car': 'Porsche 911 Turbo S', 'time': 10.8},
-      {'username': 'SpeedRacer', 'car': 'Chevrolet Corvette C8', 'time': 10.9},
-      {'username': 'PowerRush', 'car': 'Nissan GTR Nismo', 'time': 11.0},
-      {'username': 'DragsterPro', 'car': 'BMW M4 Competition', 'time': 11.1},
-      {'username': 'StripMaster', 'car': 'Audi RS7', 'time': 11.2},
-      {
-        'username': 'NitroKing',
-        'car': 'Dodge Challenger Hellcat',
-        'time': 11.3
-      },
-      {
-        'username': 'LaunchControl',
-        'car': 'Mercedes AMG GT Black Series',
-        'time': 11.4
-      },
-      {
-        'username': 'LightSpeed',
-        'car': 'Ford Mustang Shelby GT500',
-        'time': 11.5
-      },
-      {
-        'username': 'QuarterSpecialist',
-        'car': 'Lexus RC F Track Edition',
-        'time': 11.6
-      },
-      {'username': 'SpeedTrack', 'car': 'Jaguar F-Type R', 'time': 11.7},
-      {
-        'username': 'DragProdigy',
-        'car': 'Chevrolet Camaro ZL1 1LE',
-        'time': 11.8
-      },
-      {'username': 'SprintStar', 'car': 'Subaru WRX STI', 'time': 11.9},
-      {'username': 'MileStone', 'car': 'Porsche Cayman GT4', 'time': 12.0},
-      {'username': 'RacerEdge', 'car': 'Toyota Supra', 'time': 12.1},
-      {'username': 'SpeedMarker', 'car': 'Honda Civic Type R', 'time': 12.2},
-    ],
-  ];
+  StreamSubscription<QuerySnapshot>? _measurementsSubscription;
 
   // Aktív adatok kiválasztása
-  List<Map<String, dynamic>> get _activeData {
+  List<Map<String, dynamic>>? get _activeData {
+    if (_isLoading) {
+      return null;
+    }
     if (_showPersonalResults) {
-      return _personalMeasurements ?? [];
+      return _personalMeasurements;
     } else {
-      return _dailyBestData[_selectedLeaderboardType];
+      return _dailyTopMeasurements;
     }
   }
 
@@ -161,7 +63,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
     _speedProvider.addListener(() {
       if (mounted) setState(() {});
     });
-    _loadPersonalMeasurements();
+    _setupRealtimeUpdates();
   }
 
   @override
@@ -170,70 +72,218 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
     _speedProvider.removeListener(() {
       if (mounted) setState(() {});
     });
+    _measurementsSubscription?.cancel();
     super.dispose();
   }
 
-  Future<void> _loadPersonalMeasurements() async {
-  setState(() {
-    _isLoading = true;
-    _personalMeasurements = []; // Initialize to empty array before loading
-  });
-
-  String measurementType;
-  switch (_selectedLeaderboardType) {
-    case 0:
-      measurementType = 'zero-to-hundred';
-      break;
-    case 1:
-      measurementType = 'hundred-to-twohundred';
-      break;
-    case 2:
-      measurementType = 'quarter-mile';
-      break;
-    default:
-      measurementType = 'zero-to-hundred';
+  void _setupRealtimeUpdates() {
+    _startListeningToMeasurements();
   }
 
-  try {
-    // Debug print the current user ID
-    final currentUser = AuthService().currentUser;
-    // ignore: avoid_print
-    print('Current user ID: ${currentUser?.uid}');
-    
-    // Debug print the measurement type we're looking for
-    // ignore: avoid_print
-    print('Loading measurements for type: $measurementType');
-    
-    final measurements = await AuthService().getUserMeasurements(measurementType);
-    
-    // Debug print the results
-    // ignore: avoid_print
-    print('Received ${measurements.length} measurements from AuthService');
-    for (var m in measurements) {
-      // ignore: avoid_print
-      print('Measurement data: $m');
+  void _startListeningToMeasurements() {
+    String measurementType;
+    switch (_selectedLeaderboardType) {
+      case 0:
+        measurementType = 'zero-to-hundred';
+        break;
+      case 1:
+        measurementType = 'hundred-to-twohundred';
+        break;
+      case 2:
+        measurementType = 'quarter-mile';
+        break;
+      default:
+        measurementType = 'zero-to-hundred';
     }
-    
-    // Update state with the measurements, even if empty
-    setState(() {
-      _personalMeasurements = measurements;
-      _isLoading = false;
-    });
-    
-    // For debugging, let's also print the current state of _activeData
-    // ignore: avoid_print
-    print('Active data length after loading: ${_activeData.length}');
-  } catch (e) {
-    // ignore: avoid_print
-    print('Error loading measurements: $e');
-    setState(() {
-      _personalMeasurements = [];
-      _isLoading = false;
-    });
-  }
-}
 
-// Update this getter to provide better debug information
+    // Cancel any existing subscription
+    _measurementsSubscription?.cancel();
+
+    // Set up new real-time listener based on view type
+    if (_showPersonalResults) {
+      // Listen to personal measurements - Ezt hagyjuk változatlanul
+      final currentUser = AuthService().currentUser;
+      if (currentUser != null) {
+        _measurementsSubscription = FirebaseFirestore.instance
+            .collection('measurements')
+            .where('userId', isEqualTo: currentUser.uid)
+            .where('type', isEqualTo: measurementType)
+            .orderBy('date', descending: true)
+            .snapshots()
+            .listen((snapshot) {
+          if (!mounted) return;
+
+          final measurements = snapshot.docs.map((doc) {
+            final data = doc.data();
+            return {
+              'username': 'Te',
+              'car': data['car'] ?? 'Unknown Car',
+              'time': (data['time'] as num).toDouble(),
+              'date': data['date'],
+            };
+          }).toList();
+
+          setState(() {
+            _personalMeasurements = measurements;
+            _isLoading = false;
+          });
+        });
+      }
+    } else {
+      // Listen to daily top measurements - Itt kell a mai napra szűrni
+      // Számítsuk ki a mai nap kezdetét és végét
+      final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day);
+      final endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+
+      // Firestore timestamp-ekre konvertálás
+      final startTimestamp = Timestamp.fromDate(startOfDay);
+      final endTimestamp = Timestamp.fromDate(endOfDay);
+
+      _measurementsSubscription = FirebaseFirestore.instance
+          .collection('measurements')
+          .where('type', isEqualTo: measurementType)
+          .where('date', isGreaterThanOrEqualTo: startTimestamp)
+          .where('date', isLessThanOrEqualTo: endTimestamp)
+          .snapshots()
+          .listen((snapshot) {
+        _processMeasurementsSnapshot(snapshot);
+      });
+    }
+  }
+
+  void _processMeasurementsSnapshot(QuerySnapshot snapshot) async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final Map<String, Map<String, dynamic>> bestByUser = {};
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final userId = data['userId'] as String;
+        final time = (data['time'] as num).toDouble();
+
+        // Try to get user data
+        try {
+          FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .get()
+              .then((userDoc) {
+            if (userDoc.exists) {
+              final userData = userDoc.data();
+              String username =
+                  userData?['nickname'] ?? userData?['email'] ?? 'Unknown User';
+
+              // Only update if this is better than existing result or first result
+              if (!bestByUser.containsKey(userId) ||
+                  time < bestByUser[userId]!['time']) {
+                final bool isCurrentUser =
+                    userId == AuthService().currentUser?.uid;
+
+                if (mounted) {
+                  setState(() {
+                    bestByUser[userId] = {
+                      'username': isCurrentUser ? 'Te' : username,
+                      'car': data['car'] ?? 'Unknown Car',
+                      'time': time,
+                      'isCurrentUser': isCurrentUser,
+                    };
+
+                    // Update the daily top measurements
+                    final List<Map<String, dynamic>> topMeasurements =
+                        bestByUser.values.toList()
+                          ..sort((a, b) => (a['time'] as double)
+                              .compareTo(b['time'] as double));
+                    _dailyTopMeasurements = topMeasurements.take(50).toList();
+                  });
+                }
+              }
+            }
+          });
+        } catch (e) {
+          // ignore: avoid_print
+          print('Error fetching user data: $e');
+        }
+      }
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error processing measurements: $e');
+      setState(() {
+        _dailyTopMeasurements = [];
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadPersonalMeasurements() async {
+    setState(() {
+      _isLoading = true;
+      _personalMeasurements = []; // Initialize to empty array before loading
+    });
+
+    String measurementType;
+    switch (_selectedLeaderboardType) {
+      case 0:
+        measurementType = 'zero-to-hundred';
+        break;
+      case 1:
+        measurementType = 'hundred-to-twohundred';
+        break;
+      case 2:
+        measurementType = 'quarter-mile';
+        break;
+      default:
+        measurementType = 'zero-to-hundred';
+    }
+
+    try {
+      // Debug print the current user ID
+      final currentUser = AuthService().currentUser;
+      // ignore: avoid_print
+      print('Current user ID: ${currentUser?.uid}');
+
+      // Debug print the measurement type we're looking for
+      // ignore: avoid_print
+      print('Loading measurements for type: $measurementType');
+
+      final measurements =
+          await AuthService().getUserMeasurements(measurementType);
+
+      // Debug print the results
+      // ignore: avoid_print
+      print('Received ${measurements.length} measurements from AuthService');
+      for (var m in measurements) {
+        // ignore: avoid_print
+        print('Measurement data: $m');
+      }
+
+      // Update state with the measurements, even if empty
+      setState(() {
+        _personalMeasurements = measurements;
+        _isLoading = false;
+      });
+
+      // For debugging, let's also print the current state of _activeData
+      // ignore: avoid_print
+      print('Active data length after loading: ${_activeData?.length ?? 0}');
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error loading measurements: $e');
+      setState(() {
+        _personalMeasurements = [];
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -246,16 +296,6 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
         centerTitle: true,
         backgroundColor: Colors.black,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.calendar_today, color: Colors.white),
-            onPressed: () {
-              // Itt lehetne implementálni a dátumválasztást
-              ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Mai nap adatait látod')));
-            },
-          ),
-        ],
       ),
       backgroundColor: Colors.black,
       body: Column(
@@ -315,11 +355,11 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                     ),
                     child: Row(
                       children: [
-                        SizedBox(width: 30),
                         Expanded(
-                          flex: 2,
+                          flex: 5,
                           child: Text(
                             "Felhasználó",
+                            textAlign: TextAlign.left,
                             style: TextStyle(
                               color: Colors.white70,
                               fontWeight: FontWeight.bold,
@@ -327,20 +367,22 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                           ),
                         ),
                         Expanded(
-                          flex: 3,
+                          flex: 5,
                           child: Text(
                             "Autó",
+                            textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.white70,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                        SizedBox(
-                          width: 70,
+                        Container(
+                          width: 80,
+                          alignment: Alignment.centerRight,
                           child: Text(
                             "Idő",
-                            textAlign: TextAlign.end,
+                            textAlign: TextAlign.right,
                             style: TextStyle(
                               color: Colors.white70,
                               fontWeight: FontWeight.bold,
@@ -351,7 +393,6 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                     ),
                   ),
 
-                  // Lista elemek
                   Expanded(
                     child: _buildLeaderboard(),
                   ),
@@ -359,9 +400,6 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
               ),
             ),
           ),
-
-          // Frissítés gomb
-          _buildRefreshButton(),
         ],
       ),
     );
@@ -387,13 +425,23 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
 
     return Expanded(
       child: InkWell(
-        onTap: () {
+        onTap: () async {
+          // Töröljük az előző lekérdezést
+          await _measurementsSubscription?.cancel();
+
           setState(() {
             _selectedLeaderboardType = index;
+            _isLoading = true; // Mutassuk a betöltést
           });
-          // Azonnal töltsük be az új méréseket kategóriaváltáskor
+
+          // Várjunk egy kis időt, hogy biztosan törlődjön az előző lekérdezés
+          await Future.delayed(Duration(milliseconds: 100));
+
+          // Indítsuk az új lekérdezést
           if (_showPersonalResults) {
-            _loadPersonalMeasurements();
+            await _loadPersonalMeasurements();
+          } else {
+            _startListeningToMeasurements();
           }
         },
         child: Container(
@@ -417,16 +465,55 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
 
   Widget _buildDataSourceButton(bool isPersonal, String title) {
     final isSelected = _showPersonalResults == isPersonal;
+    final currentUser = AuthService().currentUser;
 
     return Expanded(
       child: InkWell(
         onTap: () {
+          if (isPersonal && currentUser == null) {
+            // Ha a saját mérésekre kattint és nincs bejelentkezve
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  backgroundColor: Colors.grey[900],
+                  title: Text(
+                    'Bejelentkezés szükséges',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  content: Text(
+                    'A saját mérések megtekintéséhez jelentkezz be!',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Mégse',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        context.go('/login');
+                      },
+                      child: Text(
+                        'Bejelentkezés',
+                        style: TextStyle(color: Colors.amber),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+            return;
+          }
+
           setState(() {
             _showPersonalResults = isPersonal;
           });
-          if (isPersonal) {
-            _loadPersonalMeasurements();
-          }
+          _startListeningToMeasurements();
         },
         child: Container(
           padding: EdgeInsets.symmetric(vertical: 12),
@@ -450,6 +537,8 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
   Widget _buildLeaderboardItem(int index, Map<String, dynamic> item) {
     // Első három helyezett színei - csak a napi legjobbaknál
     Color? rankColor;
+    Color bgColor = Colors.transparent;
+
     if (!_showPersonalResults) {
       if (index == 0) {
         rankColor = Colors.amber; // Arany
@@ -458,15 +547,26 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
       } else if (index == 2) {
         rankColor = Colors.brown[300]; // Bronz
       }
+
+      // Ha ez a bejelentkezett felhasználó sora
+      if (item['username'] == 'Te') {
+        // ignore: deprecated_member_use
+        bgColor = Colors.amber.withOpacity(0.2);
+      } else {
+        bgColor =
+            // ignore: deprecated_member_use
+            index % 2 == 0 ? Colors.black.withOpacity(0.3) : Colors.transparent;
+      }
+    } else {
+      bgColor =
+          // ignore: deprecated_member_use
+          index % 2 == 0 ? Colors.black.withOpacity(0.3) : Colors.transparent;
     }
 
     return Container(
       margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       decoration: BoxDecoration(
-        // ignore: deprecated_member_use
-        color:
-            // ignore: deprecated_member_use
-            index % 2 == 0 ? Colors.black.withOpacity(0.3) : Colors.transparent,
+        color: bgColor,
         borderRadius: BorderRadius.circular(8),
       ),
       padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -488,37 +588,44 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
 
           // Felhasználói név
           Expanded(
-            flex: 2,
+            flex: 5,
             child: Text(
               item['username'],
               style: TextStyle(
-                color: _showPersonalResults ? Colors.amber : Colors.white,
-                fontWeight: rankColor != null || _showPersonalResults
+                color: _showPersonalResults || item['username'] == 'Te'
+                    ? Colors.amber
+                    : Colors.white,
+                fontWeight: rankColor != null ||
+                        _showPersonalResults ||
+                        item['username'] == 'Te'
                     ? FontWeight.bold
                     : FontWeight.normal,
               ),
               overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.left,
             ),
           ),
 
           // Autó típus
           Expanded(
-            flex: 3,
+            flex: 5,
             child: Text(
               item['car'],
               style: TextStyle(
                 color: Colors.white70,
               ),
               overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
           ),
 
           // Idő
-          SizedBox(
-            width: 70,
+          Container(
+            width: 80,
+            alignment: Alignment.centerRight,
             child: Text(
-              "${item['time']} ${_getTimeUnit()}",
-              textAlign: TextAlign.end,
+              "${item['time'].toStringAsFixed(1)} ${_getTimeUnit()}",
+              textAlign: TextAlign.right,
               style: TextStyle(
                 color: rankColor ?? Colors.white,
                 fontWeight: FontWeight.bold,
@@ -531,7 +638,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
   }
 
   Widget _buildLeaderboard() {
-    if (_isLoading) {
+    if (_isLoading || _activeData == null) {
       return Center(
         child: CircularProgressIndicator(
           color: Colors.amber,
@@ -539,10 +646,13 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
       );
     }
 
-    if (_showPersonalResults && (_personalMeasurements?.isEmpty ?? true)) {
+    final data = _activeData!;
+    if (data.isEmpty) {
       return Center(
         child: Text(
-          "Még nincsenek mérési eredményeid",
+          _showPersonalResults
+              ? "Még nincsenek mérési eredményeid"
+              : "Ma még nem születtek eredmények ebben a kategóriában",
           style: TextStyle(color: Colors.white70),
         ),
       );
@@ -550,39 +660,11 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
 
     return ListView.builder(
       padding: EdgeInsets.symmetric(vertical: 8),
-      itemCount: _activeData.length,
+      itemCount: data.length,
       itemBuilder: (context, index) {
-        final item = _activeData[index];
+        final item = data[index];
         return _buildLeaderboardItem(index, item);
       },
-    );
-  }
-
-  Widget _buildRefreshButton() {
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-      child: ElevatedButton.icon(
-        onPressed: () {
-          if (_showPersonalResults) {
-            _loadPersonalMeasurements();
-          }
-        },
-        icon: Icon(Icons.refresh, color: Colors.black),
-        label: Text(
-          "Frissítés",
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.amber,
-          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-        ),
-      ),
     );
   }
 }

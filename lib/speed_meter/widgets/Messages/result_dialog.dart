@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 
-void showResultAndReturnToHomePage(BuildContext context, Duration elapsedTime, int targetSpeed, VoidCallback resetMeasurement) {
+void showResultAndReturnToHomePage(
+  BuildContext context,
+  Duration elapsedTime,
+  int targetSpeed,
+  VoidCallback resetMeasurement, {
+  String resultText = "Mérés eredménye", // Default értékkel
+}) {
   showDialog(
     context: context,
     barrierDismissible: false,
@@ -27,7 +33,7 @@ void showResultAndReturnToHomePage(BuildContext context, Duration elapsedTime, i
               ),
               SizedBox(height: 10),
               Text(
-                "Az idő, amíg elérted a $targetSpeed km/h-t:",
+                resultText, // Itt használjuk az átadott szöveget
                 style: TextStyle(fontSize: 18, color: Colors.white70),
                 textAlign: TextAlign.center,
               ),
@@ -54,7 +60,9 @@ void showResultAndReturnToHomePage(BuildContext context, Duration elapsedTime, i
                   ),
                   padding: EdgeInsets.symmetric(horizontal: 30, vertical: 12),
                 ),
-                child: Text("OK", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                child: Text("OK",
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
             ],
           ),

@@ -28,9 +28,10 @@ class _QuarterMileState extends State<QuarterMile> {
   bool showMovementWarning = false;
   bool isTestButtonVisible = false;
   bool _measurementTimerStarted = false;
-  bool _isMeasurementFinished = false; // Add the flag to existing properties
+  bool _isMeasurementFinished = false;
   DateTime? _startTime;
   StreamSubscription<Position>? _positionStreamSubscription;
+  Timer? _speedIncreaseTimer; // Új Timer a sebesség növeléséhez
 
   // Get quarter mile distance based on unit
   double get quarterMileDistance => _speedProvider.isKmh ? 0.402336 : 0.25;
@@ -39,7 +40,6 @@ class _QuarterMileState extends State<QuarterMile> {
   void initState() {
     super.initState();
     _checkPermissionsAndStartListening();
-    // Add listener for speed changes
     _speedProvider.addListener(_onSpeedChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startMeasurement();
@@ -90,8 +90,8 @@ class _QuarterMileState extends State<QuarterMile> {
 
       _distanceTraveled += distance / 1000; // Convert to kilometers
 
-      // Start timer after 5 meters (0.005 km)
-      if (!_measurementTimerStarted && _distanceTraveled >= 0.005) {
+      // Start timer after movement begins
+      if (!_measurementTimerStarted && _distanceTraveled >= 0.001) {
         _measurementTimerStarted = true;
         _startTime = DateTime.now();
         setState(() {
@@ -108,7 +108,7 @@ class _QuarterMileState extends State<QuarterMile> {
         });
       }
 
-      // Check if quarter mile reached
+      // Check if quarter mile reached - only condition for completion
       if (_distanceTraveled >= quarterMileDistance) {
         _finishMeasurement();
       }
@@ -133,12 +133,12 @@ class _QuarterMileState extends State<QuarterMile> {
 
     setState(() {
       isMeasurementActive = true;
-      isMeasurementStarted = true; // Add this line to show success message
+      isMeasurementStarted = true;
+      isTestButtonVisible = true; // Bekapcsoljuk a teszt gombot
       _measurementTimerStarted = false;
       _distanceTraveled = 0.0;
       _startTime = null;
-      _isMeasurementFinished =
-          false; // Reset flag when starting new measurement
+      _isMeasurementFinished = false;
     });
 
     // Hide "Measurement started" message after 3 seconds
@@ -151,12 +151,41 @@ class _QuarterMileState extends State<QuarterMile> {
     });
   }
 
+  // Új függvény a sebesség növeléséhez
+  void _startSpeedIncrease() {
+    setState(() {
+      _distanceTraveled = 0.01; // Kezdési távolság
+      _measurementTimerStarted = true;
+      _startTime = DateTime.now();
+    });
+
+    const double targetDistance = 0.41; // Kicsit nagyobb mint a negyed mérföld
+    const Duration interval = Duration(milliseconds: 100);
+
+    _speedIncreaseTimer = Timer.periodic(interval, (Timer timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      setState(() {
+        _distanceTraveled += 0.01; // Távolság növelése
+
+        if (_distanceTraveled >= targetDistance) {
+          timer.cancel();
+          _finishMeasurement();
+        }
+      });
+    });
+  }
+
   void _finishMeasurement() {
     if (_startTime != null && mounted && !_isMeasurementFinished) {
       _isMeasurementFinished = true; // Set flag to prevent multiple saves
 
       // Cancel subscription
       _positionStreamSubscription?.cancel();
+      _speedIncreaseTimer?.cancel();
 
       final elapsedTime = DateTime.now().difference(_startTime!);
       final timeInSeconds = elapsedTime.inMilliseconds / 1000.0;
@@ -179,12 +208,13 @@ class _QuarterMileState extends State<QuarterMile> {
           showResultAndReturnToHomePage(
             context,
             elapsedTime,
-            (_speedProvider.isKmh ? 402.336 : 402.336).toInt(),
+            _speedProvider.isKmh ? 402 : 0, // Ez csak egy megjelenítési szám
             () {
               if (mounted) {
                 context.go('/home');
               }
             },
+            resultText: "¼ Mile Time", // Módosított eredménykiírás
           );
         }
       }).catchError((error) {
@@ -195,12 +225,13 @@ class _QuarterMileState extends State<QuarterMile> {
           showResultAndReturnToHomePage(
             context,
             elapsedTime,
-            (_speedProvider.isKmh ? 402.336 : 402.336).toInt(),
+            _speedProvider.isKmh ? 402 : 0,
             () {
               if (mounted) {
                 context.go('/home');
               }
             },
+            resultText: "¼ Mile Time", // Itt is módosítva
           );
         }
       });
@@ -208,6 +239,8 @@ class _QuarterMileState extends State<QuarterMile> {
   }
 
   void _resetMeasurement() {
+    _speedIncreaseTimer?.cancel(); // Törölni a timert reset esetén is
+
     setState(() {
       isMeasurementActive = false;
       isMeasurementStarted = false;
@@ -228,6 +261,7 @@ class _QuarterMileState extends State<QuarterMile> {
   void dispose() {
     _positionStreamSubscription?.cancel();
     _speedProvider.removeListener(_onSpeedChanged);
+    _speedIncreaseTimer?.cancel(); // Ne felejtsük el törölni a timert
     super.dispose();
   }
 
@@ -258,6 +292,13 @@ class _QuarterMileState extends State<QuarterMile> {
                     text: "Cancel",
                     backgroundColor: Colors.red,
                   ),
+                  // Teszt sebesség gomb hozzáadása
+                  if (isTestButtonVisible)
+                    NoOutlineMeasurementButton(
+                      onPressed: _startSpeedIncrease,
+                      text: "Teszt Sebesség Növelés",
+                      backgroundColor: Colors.blue,
+                    ),
                 ],
               ],
             ),

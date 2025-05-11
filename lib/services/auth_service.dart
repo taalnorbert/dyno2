@@ -314,7 +314,10 @@ class AuthService {
       } else if (e.code == 'wrong-password') {
         message = 'Wrong password provided for that user.';
       }
-      _showWarningMessageSafe(context, message, Colors.red);
+
+      // Ahelyett hogy csak a context-be küldenénk a hibát,
+      // dobjunk egy konkrét exception-t, amit a hívó kezelhet
+      throw Exception(message);
     }
   }
 
@@ -345,8 +348,31 @@ class AuthService {
     }
   }
 
+  Future<bool> isNicknameAvailable(String nickname) async {
+    try {
+      // Ellenőrizzük, hogy a becenév már foglalt-e (bármely felhasználó által)
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('nickname', isEqualTo: nickname)
+          .get();
+
+      // Ha üres a lekérdezés eredménye, akkor a becenév még szabad
+      return querySnapshot.docs.isEmpty;
+    } catch (e) {
+      logger.e('Nickname availability check error:',
+          error: e, stackTrace: StackTrace.current);
+      rethrow;
+    }
+  }
+
   Future<void> updateNickname(String nickname) async {
     try {
+      // Ellenőrizzük, hogy a becenév már foglalt-e
+      final isAvailable = await isNicknameAvailable(nickname);
+      if (!isAvailable) {
+        throw Exception('Ez a becenév már foglalt!');
+      }
+
       final user = _auth.currentUser;
       if (user != null) {
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({

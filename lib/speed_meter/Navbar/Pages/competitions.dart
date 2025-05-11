@@ -21,6 +21,13 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
   bool _isLoading = false;
   StreamSubscription<QuerySnapshot>? _measurementsSubscription;
 
+  // Design constants
+  final Color _primaryRed = Colors.redAccent; // Új redAccent szín
+  final Color _backgroundBlack = Color(0xFF121212);
+  final Color _cardBlack = Color(0xFF1E1E1E);
+  final Color _accentGrey = Color(0xFF333333);
+  final Color _textWhite = Color(0xFFF5F5F5);
+
   // Aktív adatok kiválasztása
   List<Map<String, dynamic>>? get _activeData {
     if (_isLoading) {
@@ -291,20 +298,20 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
       appBar: AppBar(
         title: Text(
           _getLeaderboardTitle(),
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold, color: _textWhite),
         ),
         centerTitle: true,
-        backgroundColor: Colors.black,
+        backgroundColor: _backgroundBlack,
         elevation: 0,
       ),
-      backgroundColor: Colors.black,
+      backgroundColor: _backgroundBlack,
       body: Column(
         children: [
           // Kategória választó
           Container(
             margin: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
             decoration: BoxDecoration(
-              color: Colors.grey[900],
+              color: _cardBlack,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -321,7 +328,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
           Container(
             margin: EdgeInsets.only(bottom: 10, left: 16, right: 16),
             decoration: BoxDecoration(
-              color: Colors.grey[900],
+              color: _cardBlack,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -338,7 +345,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
             child: Container(
               margin: EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: Colors.grey[900],
+                color: _cardBlack,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -347,7 +354,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                   Container(
                     padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                     decoration: BoxDecoration(
-                      color: Colors.grey[850],
+                      color: _accentGrey,
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(12),
                         topRight: Radius.circular(12),
@@ -361,7 +368,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                             "Felhasználó",
                             textAlign: TextAlign.left,
                             style: TextStyle(
-                              color: Colors.white70,
+                              color: _textWhite,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -372,7 +379,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                             "Autó",
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: Colors.white70,
+                              color: _textWhite,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -384,7 +391,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                             "Idő",
                             textAlign: TextAlign.right,
                             style: TextStyle(
-                              color: Colors.white70,
+                              color: _textWhite,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -447,14 +454,14 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
         child: Container(
           padding: EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.amber : Colors.transparent,
+            color: isSelected ? _primaryRed : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             buttonText,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: isSelected ? Colors.black : Colors.white,
+              color: isSelected ? Colors.white : Colors.white70,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -476,10 +483,10 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
               context: context,
               builder: (BuildContext context) {
                 return AlertDialog(
-                  backgroundColor: Colors.grey[900],
+                  backgroundColor: _cardBlack,
                   title: Text(
                     'Bejelentkezés szükséges',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: _textWhite),
                   ),
                   content: Text(
                     'A saját mérések megtekintéséhez jelentkezz be!',
@@ -500,7 +507,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                       },
                       child: Text(
                         'Bejelentkezés',
-                        style: TextStyle(color: Colors.amber),
+                        style: TextStyle(color: _primaryRed),
                       ),
                     ),
                   ],
@@ -518,14 +525,14 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
         child: Container(
           padding: EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.amber : Colors.transparent,
+            color: isSelected ? _primaryRed : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             title,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: isSelected ? Colors.black : Colors.white,
+              color: isSelected ? Colors.white : Colors.white70,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -541,26 +548,26 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
 
     if (!_showPersonalResults) {
       if (index == 0) {
-        rankColor = Colors.amber; // Arany
+        rankColor = _primaryRed; // Első hely - piros
       } else if (index == 1) {
-        rankColor = Colors.grey[400]; // Ezüst
+        rankColor = Color(0xFFE74C3C); // Második hely - világosabb piros
       } else if (index == 2) {
-        rankColor = Colors.brown[300]; // Bronz
+        rankColor = Color(0xFFFF6B6B); // Harmadik hely - még világosabb piros
       }
 
       // Ha ez a bejelentkezett felhasználó sora
       if (item['username'] == 'Te') {
         // ignore: deprecated_member_use
-        bgColor = Colors.amber.withOpacity(0.2);
+        bgColor = _primaryRed.withOpacity(0.15);
       } else {
         bgColor =
             // ignore: deprecated_member_use
-            index % 2 == 0 ? Colors.black.withOpacity(0.3) : Colors.transparent;
+            index % 2 == 0 ? _accentGrey.withOpacity(0.3) : Colors.transparent;
       }
     } else {
       bgColor =
           // ignore: deprecated_member_use
-          index % 2 == 0 ? Colors.black.withOpacity(0.3) : Colors.transparent;
+          index % 2 == 0 ? _accentGrey.withOpacity(0.3) : Colors.transparent;
     }
 
     return Container(
@@ -578,7 +585,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
             child: Text(
               "${index + 1}.",
               style: TextStyle(
-                color: rankColor ?? Colors.white,
+                color: rankColor ?? _textWhite,
                 fontWeight:
                     rankColor != null ? FontWeight.bold : FontWeight.normal,
                 fontSize: rankColor != null ? 16 : 14,
@@ -593,8 +600,8 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
               item['username'],
               style: TextStyle(
                 color: _showPersonalResults || item['username'] == 'Te'
-                    ? Colors.amber
-                    : Colors.white,
+                    ? _primaryRed
+                    : _textWhite,
                 fontWeight: rankColor != null ||
                         _showPersonalResults ||
                         item['username'] == 'Te'
@@ -627,7 +634,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
               "${item['time'].toStringAsFixed(1)} ${_getTimeUnit()}",
               textAlign: TextAlign.right,
               style: TextStyle(
-                color: rankColor ?? Colors.white,
+                color: rankColor ?? _textWhite,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -641,7 +648,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
     if (_isLoading || _activeData == null) {
       return Center(
         child: CircularProgressIndicator(
-          color: Colors.amber,
+          color: _primaryRed,
         ),
       );
     }

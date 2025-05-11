@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dyno2/speed_meter/widgets/Messages/warning_message.dart';
+import 'package:dyno2/widgets/loading_overlay.dart'; // Importáljuk a LoadingOverlay-t
 
 class Signup extends StatefulWidget {
   // Change to StatefulWidget
@@ -24,6 +25,7 @@ class _SignupState extends State<Signup> {
   bool _hasUpperCase = false;
   bool _hasNumber = false;
   bool _isEmailValid = false;
+  bool _isLoading = false; // Betöltési állapot hozzáadása
 
   // Add new state variables for warning messages
   bool showPasswordRequirementsWarning = false;
@@ -32,94 +34,100 @@ class _SignupState extends State<Signup> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      resizeToAvoidBottomInset: true,
-      bottomNavigationBar: _signin(context),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Center(
-              child: SingleChildScrollView(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Register Account',
-                      style: GoogleFonts.raleway(
-                        textStyle: const TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 32,
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: Colors.black,
+          resizeToAvoidBottomInset: true,
+          bottomNavigationBar: _signin(context),
+          body: SafeArea(
+            child: Stack(
+              children: [
+                Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 16),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Register Account',
+                          style: GoogleFonts.raleway(
+                            textStyle: const TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 32,
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 40),
+                        _emailAddress(),
+                        const SizedBox(height: 20),
+                        _password(),
+                        const SizedBox(height: 20),
+                        _confirmPassword(),
+                        const SizedBox(height: 16),
+                        // Password requirements moved here
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildPasswordRequirement(
+                                isValid: _hasMinLength,
+                                text: "At least 8 characters",
+                              ),
+                              const SizedBox(height: 8),
+                              _buildPasswordRequirement(
+                                isValid: _hasUpperCase,
+                                text: "At least one uppercase letter",
+                              ),
+                              const SizedBox(height: 8),
+                              _buildPasswordRequirement(
+                                isValid: _hasNumber,
+                                text: "At least one number",
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+                        _signup(context),
+                      ],
                     ),
-                    const SizedBox(height: 40),
-                    _emailAddress(),
-                    const SizedBox(height: 20),
-                    _password(),
-                    const SizedBox(height: 20),
-                    _confirmPassword(),
-                    const SizedBox(height: 16),
-                    // Password requirements moved here
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildPasswordRequirement(
-                            isValid: _hasMinLength,
-                            text: "At least 8 characters",
-                          ),
-                          const SizedBox(height: 8),
-                          _buildPasswordRequirement(
-                            isValid: _hasUpperCase,
-                            text: "At least one uppercase letter",
-                          ),
-                          const SizedBox(height: 8),
-                          _buildPasswordRequirement(
-                            isValid: _hasNumber,
-                            text: "At least one number",
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    _signup(context),
-                  ],
+                  ),
                 ),
-              ),
+                // Add warning messages
+                if (showPasswordRequirementsWarning)
+                  const WarningMessage(
+                    key: Key('requirementsWarning'),
+                    message: "Please meet all password requirements",
+                    icon: Icons.warning,
+                    color: Colors.red,
+                    iconColor: Colors.white,
+                  ),
+                if (showPasswordMismatchWarning)
+                  const WarningMessage(
+                    key: Key('mismatchWarning'),
+                    message: "Passwords do not match!",
+                    icon: Icons.warning,
+                    color: Colors.red,
+                    iconColor: Colors.white,
+                  ),
+                if (showEmailWarning)
+                  const WarningMessage(
+                    key: Key('emailWarning'),
+                    message: "Please enter a valid email address",
+                    icon: Icons.warning,
+                    color: Colors.red,
+                    iconColor: Colors.white,
+                  ),
+              ],
             ),
-            // Add warning messages
-            if (showPasswordRequirementsWarning)
-              const WarningMessage(
-                key: Key('requirementsWarning'),
-                message: "Please meet all password requirements",
-                icon: Icons.warning,
-                color: Colors.red,
-                iconColor: Colors.white,
-              ),
-            if (showPasswordMismatchWarning)
-              const WarningMessage(
-                key: Key('mismatchWarning'),
-                message: "Passwords do not match!",
-                icon: Icons.warning,
-                color: Colors.red,
-                iconColor: Colors.white,
-              ),
-            if (showEmailWarning)
-              const WarningMessage(
-                key: Key('emailWarning'),
-                message: "Please enter a valid email address",
-                icon: Icons.warning,
-                color: Colors.red,
-                iconColor: Colors.white,
-              ),
-          ],
+          ),
         ),
-      ),
+        // LoadingOverlay hozzáadása
+        if (_isLoading) const LoadingOverlay(),
+      ],
     );
   }
 
@@ -297,34 +305,64 @@ class _SignupState extends State<Signup> {
             bottom: 0,
             width: 150,
             child: GestureDetector(
-              onTap: () async {
-                // Check email validity first
-                if (!_isEmailValid) {
-                  _showWarning('email');
-                  return;
-                }
+              onTap: _isLoading
+                  ? null
+                  : () async {
+                      // Letiltjuk betöltés közben
+                      // Check email validity first
+                      if (!_isEmailValid) {
+                        _showWarning('email');
+                        return;
+                      }
 
-                // Check password conditions
-                if (!_hasMinLength || !_hasUpperCase || !_hasNumber) {
-                  _showWarning('requirements');
-                  return;
-                }
+                      // Check password conditions
+                      if (!_hasMinLength || !_hasUpperCase || !_hasNumber) {
+                        _showWarning('requirements');
+                        return;
+                      }
 
-                if (_passwordController.text !=
-                    _confirmPasswordController.text) {
-                  _showWarning('mismatch');
-                  return;
-                }
+                      if (_passwordController.text !=
+                          _confirmPasswordController.text) {
+                        _showWarning('mismatch');
+                        return;
+                      }
 
-                await AuthService().signup(
-                  email: _emailController.text,
-                  password: _passwordController.text,
-                  context: context,
-                );
-              },
+                      // Betöltési állapot beállítása
+                      setState(() {
+                        _isLoading = true;
+                      });
+
+                      try {
+                        await AuthService().signup(
+                          email: _emailController.text,
+                          password: _passwordController.text,
+                          context: context,
+                        );
+                        // A sikeres regisztráció után a context.go() átnavigál,
+                        // így nem kell a betöltést kikapcsolni
+                      } catch (e) {
+                        // Hiba esetén megállítjuk a betöltést
+                        if (mounted) {
+                          setState(() {
+                            _isLoading = false;
+                          });
+                          // Itt lehetne hibaüzenetet megjeleníteni
+                          // ignore: use_build_context_synchronously
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content:
+                                  Text("Registration failed: ${e.toString()}"),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.red,
+                  color: _isLoading
+                      ? Colors.grey
+                      : Colors.red, // Szürke, ha betöltés alatt áll
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(14),
                     bottomLeft: Radius.circular(14),
@@ -352,9 +390,12 @@ class _SignupState extends State<Signup> {
             bottom: 0,
             width: 150,
             child: GestureDetector(
-              onTap: () {
-                context.go('/login');
-              },
+              onTap: _isLoading
+                  ? null
+                  : () {
+                      // Letiltjuk betöltés közben
+                      context.go('/login');
+                    },
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.grey[800],

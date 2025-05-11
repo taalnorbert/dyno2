@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dyno2/widgets/loading_overlay.dart'; // Importáljuk a LoadingOverlay-t
 
 class ProfilePage extends StatefulWidget {
   final String userEmail;
@@ -23,13 +24,17 @@ class _ProfilePageState extends State<ProfilePage> {
   String? _profileImageUrl;
   final _imagePicker = ImagePicker();
   String? _selectedCar;
+  bool _isLoading = false; // Aktuális loading állapot tárolásához
 
   @override
   void initState() {
     super.initState();
-    _loadNickname();
-    _loadProfileImage();
-    _loadSelectedCar(); // Add this
+    // Use a Future.microtask to ensure mounted checks happen properly
+    Future.microtask(() {
+      if (mounted) _loadNickname();
+      if (mounted) _loadProfileImage();
+      if (mounted) _loadSelectedCar();
+    });
   }
 
   @override
@@ -40,7 +45,9 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadNickname() async {
+    if (!mounted) return; // Add check before awaiting to exit early
     final nickname = await AuthService().getNickname();
+    if (!mounted) return; // Add check after async operation
     setState(() {
       _nickname = nickname;
     });
@@ -48,11 +55,14 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _updateNickname(String newNickname) async {
     try {
+      // Az AuthService fogja ellenőrizni, hogy foglalt-e a név
       await AuthService().updateNickname(newNickname);
+
       setState(() {
         _nickname = newNickname;
         _isEditingNickname = false;
       });
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -62,9 +72,10 @@ class _ProfilePageState extends State<ProfilePage> {
       );
     } catch (e) {
       if (!mounted) return;
+      // Hibakezelés, a gomb aktív marad az újrapróbálkozáshoz
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Hiba történt: ${e.toString()}'),
+          content: Text(e.toString()),
           backgroundColor: Colors.red,
         ),
       );
@@ -72,7 +83,9 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadProfileImage() async {
+    if (!mounted) return; // Add check before awaiting
     final imageUrl = await AuthService().getProfileImageUrl();
+    if (!mounted) return; // Add check after async operation
     setState(() {
       _profileImageUrl = imageUrl;
     });
@@ -89,25 +102,21 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (image == null) return;
 
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(color: Colors.blue),
-        ),
-      );
+      if (!mounted) return; // Check if widget is still mounted before setState
+      setState(() {
+        _isLoading = true; // Betöltés indítása
+      });
 
       final imageFile = File(image.path);
       final base64Image = await AuthService().uploadProfileImage(imageFile);
 
-      if (!mounted) return;
-      Navigator.pop(context);
-
+      if (!mounted) return; // Check if widget is still mounted before setState
       setState(() {
         _profileImageUrl = base64Image;
+        _isLoading = false; // Betöltés befejezése
       });
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Profilkép sikeresen módosítva!'),
@@ -116,7 +125,10 @@ class _ProfilePageState extends State<ProfilePage> {
       );
     } catch (e) {
       if (!mounted) return;
-      Navigator.pop(context);
+      setState(() {
+        _isLoading = false; // Hiba esetén is befejezzük a betöltést
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Hiba történt: ${e.toString()}'),
@@ -128,7 +140,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadSelectedCar() async {
     try {
+      if (!mounted) return; // Add check before awaiting
       final car = await AuthService().getSelectedCar();
+      if (!mounted) return; // Add check after async operation
       setState(() {
         _selectedCar = car;
       });
@@ -140,10 +154,18 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _updateSelectedCar(String car) async {
     try {
-      await AuthService().updateSelectedCar(car);
-      setState(() {
-        _selectedCar = car;
+      _safeSetState(() {
+        _isLoading = true;
       });
+
+      await AuthService().updateSelectedCar(car);
+
+      if (!mounted) return;
+      _safeSetState(() {
+        _selectedCar = car;
+        _isLoading = false;
+      });
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -153,6 +175,10 @@ class _ProfilePageState extends State<ProfilePage> {
       );
     } catch (e) {
       if (!mounted) return;
+      _safeSetState(() {
+        _isLoading = false;
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: ${e.toString()}'),
@@ -609,34 +635,28 @@ class _ProfilePageState extends State<ProfilePage> {
             ElevatedButton(
               onPressed: () async {
                 try {
-                  // Show loading indicator
-                  showDialog(
-                    context: dialogContext,
-                    barrierDismissible: false,
-                    builder: (context) => const Center(
-                      child: CircularProgressIndicator(color: Colors.red),
-                    ),
-                  );
+                  // Bezárjuk a dialógust
+                  Navigator.pop(dialogContext);
+
+                  // Főoldalon mutatjuk a betöltést
+                  if (!mounted) return;
+                  _safeSetState(() {
+                    _isLoading = true;
+                  });
 
                   await AuthService().signout(context: context);
 
-                  if (!dialogContext.mounted) return;
-                  Navigator.pop(dialogContext); // Close loading
-                  Navigator.pop(dialogContext); // Close dialog
-
-                  if (!mounted) return;
-                  context.go('/login');
+                  if (mounted) {
+                    context.go('/login');
+                  }
                 } catch (e) {
-                  if (!dialogContext.mounted) return;
-                  Navigator.pop(dialogContext);
-
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Hiba történt: ${e.toString()}'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  // Hibakezelés...
+                } finally {
+                  if (mounted) {
+                    _safeSetState(() {
+                      _isLoading = false;
+                    });
+                  }
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -679,14 +699,21 @@ class _ProfilePageState extends State<ProfilePage> {
                 controller: _nicknameController,
                 style: const TextStyle(color: Colors.white, fontSize: 18),
                 decoration: InputDecoration(
-                  hintText: 'Add meg a beceneved',
+                  hintText: 'Max 10 karakter',
                   hintStyle: TextStyle(color: Colors.grey[400]),
                   border: InputBorder.none,
+                  counterText: "${_nicknameController.text.length}/10",
+                  counterStyle: TextStyle(
+                    color: _nicknameController.text.length > 10
+                        ? Colors.red
+                        : Colors.grey,
+                  ),
                 ),
-                onSubmitted: (value) {
-                  if (value.isNotEmpty) {
-                    _updateNickname(value);
-                  }
+                maxLength: 10, // Korlátozás 10 karakterre
+                onSubmitted: _submitNickname,
+                onChanged: (value) {
+                  // Az onChanged miatt frissül a számláló
+                  setState(() {});
                 },
               ),
             )
@@ -708,9 +735,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             onPressed: () {
               if (_isEditingNickname) {
-                if (_nicknameController.text.isNotEmpty) {
-                  _updateNickname(_nicknameController.text);
-                }
+                _submitNickname(_nicknameController.text);
               } else {
                 _nicknameController.text = _nickname ?? '';
                 setState(() {
@@ -722,6 +747,60 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
     );
+  }
+
+  void _submitNickname(String value) async {
+    if (value.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('A becenév nem lehet üres!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (value.length > 10) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('A becenév maximum 10 karakter lehet!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Ellenőrizzük, hogy a jelenlegi becenév nem ugyanaz-e
+    if (value == _nickname) {
+      _safeSetState(() {
+        _isEditingNickname = false;
+      });
+      return;
+    }
+
+    try {
+      _safeSetState(() {
+        _isLoading = true;
+      });
+
+      await _updateNickname(value);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Hiba: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        _safeSetState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Widget _buildProfileAvatar() {
@@ -780,120 +859,125 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text(
-          'Profil',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(
+            title: const Text(
+              'Profil',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            centerTitle: true,
+            backgroundColor: Colors.black,
+            elevation: 0,
+          ),
+          backgroundColor: Colors.black,
+          body: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+                  _buildProfileAvatar(), // Replace the existing Container with this
+                  const SizedBox(height: 20),
+                  // Nickname Section
+                  _buildNicknameSection(),
+                  const SizedBox(height: 15),
+                  // Email Display
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[900],
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.email, color: Colors.blue),
+                        const SizedBox(width: 10),
+                        Text(
+                          widget.userEmail,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[900],
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.directions_car, color: Colors.blue),
+                        const SizedBox(width: 10),
+                        Text(
+                          _selectedCar ?? 'No car selected',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.edit,
+                            color: Colors.blue,
+                            size: 20,
+                          ),
+                          onPressed: _showCarSelectionDialog,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  // Action Buttons
+                  _buildActionButton(
+                    icon: Icons.lock,
+                    label: 'Jelszó módosítása',
+                    color: Colors.green,
+                    onPressed: () => _changePassword(context),
+                  ),
+                  const SizedBox(height: 15),
+                  _buildActionButton(
+                    icon: Icons.delete_outline,
+                    label: 'Fiók törlése',
+                    color: Colors.red.shade900,
+                    onPressed: () => _showDeleteConfirmationDialog(context),
+                  ),
+                  const SizedBox(height: 15),
+                  _buildActionButton(
+                    icon: Icons.logout,
+                    label: 'Kijelentkezés',
+                    color: Colors.red,
+                    onPressed: () => _showLogoutConfirmationDialog(context),
+                  ),
+                  const SizedBox(height: 15),
+                  _buildActionButton(
+                    icon: Icons.directions_car,
+                    label: 'Select Car',
+                    color: Colors.blue,
+                    onPressed: _showCarSelectionDialog,
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-        centerTitle: true,
-        backgroundColor: Colors.black,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            children: [
-              const SizedBox(height: 20),
-              _buildProfileAvatar(), // Replace the existing Container with this
-              const SizedBox(height: 20),
-              // Nickname Section
-              _buildNicknameSection(),
-              const SizedBox(height: 15),
-              // Email Display
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[900],
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.email, color: Colors.blue),
-                    const SizedBox(width: 10),
-                    Text(
-                      widget.userEmail,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 30),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[900],
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.directions_car, color: Colors.blue),
-                    const SizedBox(width: 10),
-                    Text(
-                      _selectedCar ?? 'No car selected',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.edit,
-                        color: Colors.blue,
-                        size: 20,
-                      ),
-                      onPressed: _showCarSelectionDialog,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 30),
-              // Action Buttons
-              _buildActionButton(
-                icon: Icons.lock,
-                label: 'Jelszó módosítása',
-                color: Colors.green,
-                onPressed: () => _changePassword(context),
-              ),
-              const SizedBox(height: 15),
-              _buildActionButton(
-                icon: Icons.delete_outline,
-                label: 'Fiók törlése',
-                color: Colors.red.shade900,
-                onPressed: () => _showDeleteConfirmationDialog(context),
-              ),
-              const SizedBox(height: 15),
-              _buildActionButton(
-                icon: Icons.logout,
-                label: 'Kijelentkezés',
-                color: Colors.red,
-                onPressed: () => _showLogoutConfirmationDialog(context),
-              ),
-              const SizedBox(height: 15),
-              _buildActionButton(
-                icon: Icons.directions_car,
-                label: 'Select Car',
-                color: Colors.blue,
-                onPressed: _showCarSelectionDialog,
-              ),
-            ],
-          ),
-        ),
-      ),
+        if (_isLoading) const LoadingOverlay(),
+      ],
     );
   }
 
@@ -933,5 +1017,12 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
     );
+  }
+
+  // Add this method to your _ProfilePageState class
+  void _safeSetState(VoidCallback fn) {
+    if (mounted) {
+      setState(fn);
+    }
   }
 }

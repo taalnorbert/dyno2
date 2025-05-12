@@ -179,13 +179,42 @@ class AuthService {
       context.go('/login');
     } on FirebaseAuthException catch (e) {
       if (!context.mounted) return;
-      String message = '';
-      if (e.code == 'weak-password') {
-        message = 'The password provided is too weak.';
-      } else if (e.code == 'email-already-in-use') {
-        message = 'An account already exists with that email.';
+      String message;
+
+      switch (e.code) {
+        case 'weak-password':
+          message = 'The password provided is too weak.';
+          break;
+        case 'email-already-in-use':
+          message = 'An account already exists with that email.';
+          break;
+        case 'invalid-email':
+          message = 'Invalid email format.';
+          break;
+        case 'operation-not-allowed':
+          message = 'Email/password registration is not enabled.';
+          break;
+        case 'too-many-requests':
+          message = 'Too many requests. Try again later.';
+          break;
+        default:
+          message = 'Registration error: ${e.message}';
       }
       _showWarningMessageSafe(context, message, Colors.red);
+    } on SocketException {
+      if (!context.mounted) return;
+      _showWarningMessageSafe(
+        context,
+        'No internet connection. Please check your network settings.',
+        Colors.red,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      _showWarningMessageSafe(
+        context,
+        'Unexpected error: ${e.toString()}',
+        Colors.red,
+      );
     }
   }
 

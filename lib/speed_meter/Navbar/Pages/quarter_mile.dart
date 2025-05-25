@@ -9,6 +9,7 @@ import '../../widgets/Messages/warning_message.dart';
 import '../../widgets/Messages/success_message.dart';
 import '../../widgets/Messages/result_dialog.dart';
 import '../../../providers/speed_provider.dart';
+import '../../../localization/app_localizations.dart';
 
 class QuarterMile extends StatefulWidget {
   const QuarterMile({super.key});
@@ -289,14 +290,14 @@ class _QuarterMileState extends State<QuarterMile> {
                 if (isMeasurementActive) ...[
                   NoOutlineMeasurementButton(
                     onPressed: _resetMeasurement,
-                    text: "Cancel",
+                    text: AppLocalizations.cancel,
                     backgroundColor: Colors.red,
                   ),
                   // Teszt sebesség gomb hozzáadása
                   if (isTestButtonVisible)
                     NoOutlineMeasurementButton(
                       onPressed: _startSpeedIncrease,
-                      text: "Teszt Sebesség Növelés",
+                      text: AppLocalizations.testSpeedIncrease,
                       backgroundColor: Colors.blue,
                     ),
                 ],
@@ -304,14 +305,14 @@ class _QuarterMileState extends State<QuarterMile> {
             ),
             if (isMeasurementStarted)
               SuccessMessage(
-                message: "Measurement started!",
+                message: AppLocalizations.measurementStarted,
                 icon: Icons.check,
                 color: Color(0xFF0ca644),
                 iconColor: Color(0xFF84D65A),
               ),
             if (showMovementWarning)
               WarningMessage(
-                message: "Vehicle is moving!",
+                message: AppLocalizations.vehicleIsMoving,
                 icon: Icons.warning,
                 color: Colors.orange,
                 iconColor: Colors.yellow,

@@ -6,7 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dyno2/speed_meter/widgets/Messages/warning_message.dart';
-import 'package:dyno2/widgets/loading_overlay.dart'; // Importálom a LoadingOverlay-t
+import 'package:dyno2/widgets/loading_overlay.dart';
+import 'package:dyno2/localization/app_localizations.dart';
 
 class Login extends StatefulWidget {
   // Change to StatefulWidget
@@ -46,7 +47,7 @@ class _LoginState extends State<Login> {
   void _handleLogin() async {
     // Ellenőrizzük, hogy van-e megadva email és jelszó
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      _showWarning('Add meg az email címed és jelszavad!');
+      _showWarning(AppLocalizations.enterEmailAndPassword);
       return;
     }
 
@@ -105,7 +106,7 @@ class _LoginState extends State<Login> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Log in',
+                                AppLocalizations.loginTitle,
                                 style: GoogleFonts.raleway(
                                   textStyle: const TextStyle(
                                     color: Colors.red, // Piros szöveg
@@ -152,7 +153,7 @@ class _LoginState extends State<Login> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Email Address',
+          AppLocalizations.emailAddress,
           style: GoogleFonts.raleway(
             textStyle: const TextStyle(
               color: Colors.grey, // Szürke szöveg
@@ -175,7 +176,7 @@ class _LoginState extends State<Login> {
                 borderSide: BorderSide.none,
                 borderRadius: BorderRadius.circular(14),
               ),
-              hintText: 'Enter your email', // Placeholder szöveg
+              hintText: AppLocalizations.enterYourEmail, // Placeholder szöveg
               hintStyle:
                   const TextStyle(color: Colors.grey), // Szürke placeholder
               contentPadding: const EdgeInsets.symmetric(
@@ -193,7 +194,7 @@ class _LoginState extends State<Login> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Password',
+          AppLocalizations.password,
           style: GoogleFonts.raleway(
             textStyle: const TextStyle(
               color: Colors.grey, // Szürke szöveg
@@ -217,7 +218,8 @@ class _LoginState extends State<Login> {
                 borderSide: BorderSide.none,
                 borderRadius: BorderRadius.circular(14),
               ),
-              hintText: 'Enter your password', // Placeholder szöveg
+              hintText:
+                  AppLocalizations.enterYourPassword, // Placeholder szöveg
               hintStyle:
                   const TextStyle(color: Colors.grey), // Szürke placeholder
               contentPadding: const EdgeInsets.symmetric(
@@ -269,7 +271,7 @@ class _LoginState extends State<Login> {
                 ),
                 child: Center(
                   child: Text(
-                    "Sign In",
+                    AppLocalizations.signIn,
                     style: GoogleFonts.raleway(
                       textStyle: const TextStyle(
                         color: Colors.white, // Fehér szöveg
@@ -302,7 +304,7 @@ class _LoginState extends State<Login> {
                 ),
                 child: Center(
                   child: Text(
-                    "Guest",
+                    AppLocalizations.guest,
                     style: GoogleFonts.raleway(
                       textStyle: const TextStyle(
                         color: Colors.white, // Fehér szöveg
@@ -328,7 +330,7 @@ class _LoginState extends State<Login> {
         text: TextSpan(
           children: [
             TextSpan(
-              text: "New User? ",
+              text: AppLocalizations.newUser,
               style: GoogleFonts.raleway(
                 textStyle: const TextStyle(
                   color: Colors.grey, // Szürke szöveg
@@ -338,7 +340,7 @@ class _LoginState extends State<Login> {
               ),
             ),
             TextSpan(
-              text: "Create Account",
+              text: AppLocalizations.createAccount,
               style: GoogleFonts.raleway(
                 textStyle: const TextStyle(
                   color: Colors.red, // Piros szöveg
@@ -357,7 +359,6 @@ class _LoginState extends State<Login> {
     );
   }
 
-  // Add this method to _LoginState class
   Widget _forgotPassword() {
     return Align(
       alignment: Alignment.centerLeft,
@@ -371,16 +372,16 @@ class _LoginState extends State<Login> {
                 final emailController = TextEditingController();
                 return AlertDialog(
                   backgroundColor: Colors.grey[900],
-                  title: const Text(
-                    'Reset Password',
-                    style: TextStyle(color: Colors.white),
+                  title: Text(
+                    AppLocalizations.resetPassword,
+                    style: const TextStyle(color: Colors.white),
                   ),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        'Enter your email address to reset your password',
-                        style: TextStyle(color: Colors.white70),
+                      Text(
+                        AppLocalizations.enterEmailToResetPassword,
+                        style: const TextStyle(color: Colors.white70),
                       ),
                       const SizedBox(height: 16),
                       TextField(
@@ -393,7 +394,7 @@ class _LoginState extends State<Login> {
                             borderSide: BorderSide.none,
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          hintText: 'Email',
+                          hintText: AppLocalizations.emailAddress,
                           hintStyle: const TextStyle(color: Colors.grey),
                         ),
                       ),
@@ -402,8 +403,8 @@ class _LoginState extends State<Login> {
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel',
-                          style: TextStyle(color: Colors.grey)),
+                      child: Text(AppLocalizations.cancel,
+                          style: const TextStyle(color: Colors.grey)),
                     ),
                     TextButton(
                       onPressed: () {
@@ -413,8 +414,8 @@ class _LoginState extends State<Login> {
                         );
                         Navigator.pop(context);
                       },
-                      child: const Text('Reset',
-                          style: TextStyle(color: Colors.red)),
+                      child: Text(AppLocalizations.reset,
+                          style: const TextStyle(color: Colors.red)),
                     ),
                   ],
                 );
@@ -422,7 +423,7 @@ class _LoginState extends State<Login> {
             );
           },
           child: Text(
-            'Forgot Password?',
+            AppLocalizations.forgotPassword,
             style: GoogleFonts.raleway(
               textStyle: TextStyle(
                 color: Colors.grey[600],

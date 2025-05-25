@@ -5,6 +5,8 @@ import '../../meter_painter.dart';
 import '../../../services/auth_service.dart';
 import '../../widgets/Messages/help_dialog.dart';
 import '../../../providers/speed_provider.dart';
+import '../../../providers/language_provider.dart';
+import '../../../localization/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 class HomePage extends StatefulWidget {
@@ -16,21 +18,29 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final SpeedProvider _speedProvider = SpeedProvider();
+  final LanguageProvider _languageProvider = LanguageProvider();
   bool isKmh = true;
   StreamSubscription<ServiceStatus>? _serviceStatusSubscription;
-
   @override
   void initState() {
     super.initState();
     _checkPermissionsAndStartListening();
     _listenToLocationServiceStatus();
 
-    // Add listener to get notified when speed changes
+    // Add listeners to get notified when speed or language changes
     _speedProvider.addListener(_onSpeedChanged);
+    _languageProvider.addListener(_onLanguageChanged);
   }
 
   void _onSpeedChanged() {
     // Force rebuild when speed changes
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _onLanguageChanged() {
+    // Force rebuild when language changes
     if (mounted) {
       setState(() {});
     }
@@ -41,9 +51,10 @@ class _HomePageState extends State<HomePage> {
     // Cancel the location service status subscription
     _serviceStatusSubscription?.cancel();
 
-    // Remove listener when widget is disposed
+    // Remove listeners when widget is disposed
     _speedProvider.removeListener(_onSpeedChanged);
-    // Note: Do not call _speedProvider.dispose() here as it might be used by other widgets
+    _languageProvider.removeListener(_onLanguageChanged);
+    // Note: Do not call providers' dispose() here as they might be used by other widgets
     // We'll only remove our listener to avoid memory leaks
     super.dispose();
   }
@@ -96,18 +107,18 @@ class _HomePageState extends State<HomePage> {
           builder: (context, setState) {
             return AlertDialog(
               backgroundColor: Colors.grey[900],
-              title: const Text(
-                'Settings',
-                style: TextStyle(color: Colors.white),
+              title: Text(
+                AppLocalizations.settings,
+                style: const TextStyle(color: Colors.white),
               ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Speed Unit Setting
                   ListTile(
-                    title: const Text(
-                      'Speed Unit',
-                      style: TextStyle(color: Colors.white),
+                    title: Text(
+                      AppLocalizations.speedUnit,
+                      style: const TextStyle(color: Colors.white),
                     ),
                     trailing: DropdownButton<bool>(
                       dropdownColor: Colors.grey[850],
@@ -132,11 +143,45 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                   ),
+                  // Language Setting
+                  ListTile(
+                    title: Text(
+                      AppLocalizations.language,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    trailing: DropdownButton<String>(
+                      dropdownColor: Colors.grey[850],
+                      value: _languageProvider.languageCode,
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          _languageProvider.setLanguage(newValue);
+                          setState(() {});
+                        }
+                      },
+                      items: [
+                        DropdownMenuItem(
+                          value: 'hu',
+                          child: Text(AppLocalizations.hungarian,
+                              style: const TextStyle(color: Colors.white)),
+                        ),
+                        DropdownMenuItem(
+                          value: 'en',
+                          child: Text(AppLocalizations.english,
+                              style: const TextStyle(color: Colors.white)),
+                        ),
+                        DropdownMenuItem(
+                          value: 'de',
+                          child: Text(AppLocalizations.german,
+                              style: const TextStyle(color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                  ),
                   // Information Button
                   ListTile(
-                    title: const Text(
-                      'Information',
-                      style: TextStyle(color: Colors.white),
+                    title: Text(
+                      AppLocalizations.information,
+                      style: const TextStyle(color: Colors.white),
                     ),
                     trailing: IconButton(
                       icon: const Icon(

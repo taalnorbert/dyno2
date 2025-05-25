@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/speed_provider.dart';
 import '../speed_meter/widgets/Messages/warning_message.dart';
 import '../speed_meter/widgets/location_disabled_screen.dart';
+import '../localization/app_localizations.dart';
 
 class MainScaffold extends StatefulWidget {
   final Widget child;
@@ -113,9 +114,9 @@ class _MainScaffoldState extends State<MainScaffold> {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           backgroundColor: Colors.grey[900],
-          title: const Text(
-            'Select Measurement',
-            style: TextStyle(color: Colors.white),
+          title: Text(
+            AppLocalizations.chooseMeasurementTitle,
+            style: const TextStyle(color: Colors.white),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -207,7 +208,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                       color:
                           bottomNavigationIndex == 0 ? Colors.red : Colors.grey,
                     ),
-                    label: 'Measure',
+                    label: AppLocalizations.measure,
                   ),
                   NavigationDestination(
                     icon: Icon(
@@ -215,7 +216,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                       color:
                           bottomNavigationIndex == 1 ? Colors.red : Colors.grey,
                     ),
-                    label: 'Verseny',
+                    label: AppLocalizations.competition,
                   ),
                   NavigationDestination(
                     icon: Icon(
@@ -223,7 +224,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                       color:
                           bottomNavigationIndex == 2 ? Colors.red : Colors.grey,
                     ),
-                    label: 'Home',
+                    label: AppLocalizations.home,
                   ),
                   NavigationDestination(
                     icon: Icon(
@@ -231,7 +232,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                       color:
                           bottomNavigationIndex == 3 ? Colors.red : Colors.grey,
                     ),
-                    label: 'Dyno',
+                    label: AppLocalizations.dyno,
                   ),
                   NavigationDestination(
                     icon: Icon(
@@ -239,7 +240,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                       color:
                           bottomNavigationIndex == 4 ? Colors.red : Colors.grey,
                     ),
-                    label: 'Laptime',
+                    label: AppLocalizations.laptime,
                   ),
                 ],
                 selectedIndex: bottomNavigationIndex,
@@ -280,25 +281,25 @@ class _MainScaffoldState extends State<MainScaffold> {
               ),
             ),
             if (showGpsWarning)
-              const WarningMessage(
-                key: Key('gpsWarning'),
-                message: 'Nincs GPS jel!',
+              WarningMessage(
+                key: const Key('gpsWarning'),
+                message: AppLocalizations.noGpsWarningMessage,
                 icon: Icons.gps_off,
                 color: Colors.orange,
                 iconColor: Colors.white,
               ),
             if (showLowSpeedWarning)
-              const WarningMessage(
-                key: Key('lowSpeedWarning'),
-                message: "Legalább 95km/h haladj!",
+              WarningMessage(
+                key: const Key('lowSpeedWarning'),
+                message: AppLocalizations.lowSpeedWarningMessage,
                 icon: Icons.warning,
                 color: Colors.red,
                 iconColor: Colors.white,
               ),
             if (showHighSpeedWarning)
-              const WarningMessage(
-                key: Key('highSpeedWarning'),
-                message: "Mozgásban vagy!",
+              WarningMessage(
+                key: const Key('highSpeedWarning'),
+                message: AppLocalizations.movingWarningMessage,
                 icon: Icons.warning,
                 color: Colors.red,
                 iconColor: Colors.white,

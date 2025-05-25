@@ -7,21 +7,20 @@ import 'firebase_options.dart';
 import 'package:dyno2/speed_meter/Navbar/Pages/home.dart';
 import 'package:dyno2/widgets/main_scaffold.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-
-// Alkalmazás szövegek konstansai
-class AppStrings {
-  static const String lowSpeedWarningMessage = "Legalább 95km/h haladj!";
-  static const String movingWarningMessage = "Mozgásban vagy!";
-  static const String noGpsWarningMessage = 'Nincs GPS jel!';
-  static const String chooseMeasurementTitle = 'Válassz mérést';
-  static const String zeroToHundredLabel = '0-100';
-  static const String hundredToTwoHundredLabel = '100-200';
-}
+import 'package:dyno2/providers/language_provider.dart';
+import 'package:dyno2/localization/app_localizations_delegate.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SharedPreferences.getInstance();
+  final prefs = await SharedPreferences.getInstance();
+  final languageProvider = LanguageProvider();
+
+  // Initialize language from stored preferences
+  final savedLanguage = prefs.getString('languageCode');
+  if (savedLanguage != null) {
+    await languageProvider.setLanguage(savedLanguage);
+  }
 
   WakelockPlus.enable();
   SystemChrome.setPreferredOrientations([
@@ -40,8 +39,33 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final LanguageProvider _languageProvider = LanguageProvider();
+
+  @override
+  void initState() {
+    super.initState();
+    _languageProvider.addListener(_onLanguageChanged);
+  }
+
+  @override
+  void dispose() {
+    _languageProvider.removeListener(_onLanguageChanged);
+    super.dispose();
+  }
+
+  void _onLanguageChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +75,19 @@ class MyApp extends StatelessWidget {
         brightness: Brightness.dark,
         useMaterial3: true,
       ),
+      locale: Locale(_languageProvider.languageCode),
+      supportedLocales: const [
+        Locale('en', ''), // English
+        Locale('hu', ''), // Hungarian
+        Locale('de', ''), // German
+      ],
+      localizationsDelegates: [
+        // No const keyword here to avoid errors
+        const AppLocalizationsDelegate(),
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

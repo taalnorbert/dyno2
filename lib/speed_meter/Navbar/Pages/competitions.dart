@@ -2,6 +2,8 @@ import 'package:dyno2/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../providers/speed_provider.dart';
+import '../../../providers/language_provider.dart';
+import '../../../localization/app_localizations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 
@@ -14,6 +16,7 @@ class CompetitionsPage extends StatefulWidget {
 
 class _CompetitionsPageState extends State<CompetitionsPage> {
   final SpeedProvider _speedProvider = SpeedProvider();
+  final LanguageProvider _languageProvider = LanguageProvider();
   int _selectedLeaderboardType = 0; // 0: 0-100, 1: 100-200, 2: 1/4 mérföld
   bool _showPersonalResults = false;
   List<Map<String, dynamic>>? _personalMeasurements;
@@ -380,8 +383,8 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildDataSourceButton(false, "Napi legjobbak"),
-                _buildDataSourceButton(true, "Saját mérések"),
+                _buildDataSourceButton(false, AppLocalizations.dailyTop),
+                _buildDataSourceButton(true, AppLocalizations.personalResults),
               ],
             ),
           ),
@@ -411,7 +414,11 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                         Expanded(
                           flex: 5,
                           child: Text(
-                            "Felhasználó",
+                            _languageProvider.isHungarian
+                                ? "Felhasználó"
+                                : _languageProvider.isGerman
+                                    ? "Benutzer"
+                                    : "User",
                             textAlign: TextAlign.left,
                             style: TextStyle(
                               color: _textWhite,
@@ -422,7 +429,11 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                         Expanded(
                           flex: 5,
                           child: Text(
-                            "Autó",
+                            _languageProvider.isHungarian
+                                ? "Autó"
+                                : _languageProvider.isGerman
+                                    ? "Auto"
+                                    : "Car",
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: _textWhite,
@@ -434,7 +445,11 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                           width: 80,
                           alignment: Alignment.centerRight,
                           child: Text(
-                            "Idő",
+                            _languageProvider.isHungarian
+                                ? "Idő"
+                                : _languageProvider.isGerman
+                                    ? "Zeit"
+                                    : "Time",
                             textAlign: TextAlign.right,
                             style: TextStyle(
                               color: _textWhite,
@@ -674,7 +689,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              "Jelentkezz be a versenytáblák megtekintéséhez",
+              AppLocalizations.loginRequiredTitle,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: _textWhite,
@@ -684,7 +699,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              "A versenytáblák csak bejelentkezett felhasználók számára érhetők el",
+              AppLocalizations.loginRequiredDescription,
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey[400]),
             ),
@@ -699,7 +714,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Bejelentkezés'),
+              child: Text(AppLocalizations.login),
             ),
           ],
         ),
@@ -719,8 +734,8 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
       return Center(
         child: Text(
           _showPersonalResults
-              ? "Még nincsenek mérési eredményeid"
-              : "Ma még nem születtek eredmények ebben a kategóriában",
+              ? AppLocalizations.noPersonalResults
+              : AppLocalizations.noDailyResults,
           style: TextStyle(color: Colors.white70),
         ),
       );

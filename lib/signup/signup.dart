@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dyno2/speed_meter/widgets/Messages/warning_message.dart';
 import 'package:dyno2/widgets/loading_overlay.dart'; // Importáljuk a LoadingOverlay-t
+import 'package:dyno2/localization/app_localizations.dart';
 
 class Signup extends StatefulWidget {
   // Change to StatefulWidget
@@ -51,7 +52,7 @@ class _SignupState extends State<Signup> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'Register Account',
+                          AppLocalizations.registerAccount,
                           style: GoogleFonts.raleway(
                             textStyle: const TextStyle(
                               color: Colors.red,
@@ -75,17 +76,17 @@ class _SignupState extends State<Signup> {
                             children: [
                               _buildPasswordRequirement(
                                 isValid: _hasMinLength,
-                                text: "At least 8 characters",
+                                text: AppLocalizations.atLeast8Chars,
                               ),
                               const SizedBox(height: 8),
                               _buildPasswordRequirement(
                                 isValid: _hasUpperCase,
-                                text: "At least one uppercase letter",
+                                text: AppLocalizations.atLeastOneUppercase,
                               ),
                               const SizedBox(height: 8),
                               _buildPasswordRequirement(
                                 isValid: _hasNumber,
-                                text: "At least one number",
+                                text: AppLocalizations.atLeastOneNumber,
                               ),
                             ],
                           ),
@@ -95,28 +96,27 @@ class _SignupState extends State<Signup> {
                       ],
                     ),
                   ),
-                ),
-                // Add warning messages
+                ), // Add warning messages
                 if (showPasswordRequirementsWarning)
-                  const WarningMessage(
-                    key: Key('requirementsWarning'),
-                    message: "Please meet all password requirements",
+                  WarningMessage(
+                    key: const Key('requirementsWarning'),
+                    message: AppLocalizations.meetPasswordRequirements,
                     icon: Icons.warning,
                     color: Colors.red,
                     iconColor: Colors.white,
                   ),
                 if (showPasswordMismatchWarning)
-                  const WarningMessage(
-                    key: Key('mismatchWarning'),
-                    message: "Passwords do not match!",
+                  WarningMessage(
+                    key: const Key('mismatchWarning'),
+                    message: AppLocalizations.passwordsDontMatch,
                     icon: Icons.warning,
                     color: Colors.red,
                     iconColor: Colors.white,
                   ),
                 if (showEmailWarning)
-                  const WarningMessage(
-                    key: Key('emailWarning'),
-                    message: "Please enter a valid email address",
+                  WarningMessage(
+                    key: const Key('emailWarning'),
+                    message: AppLocalizations.enterValidEmail,
                     icon: Icons.warning,
                     color: Colors.red,
                     iconColor: Colors.white,
@@ -137,7 +137,7 @@ class _SignupState extends State<Signup> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Email Address',
+          AppLocalizations.emailAddress,
           style: GoogleFonts.raleway(
             textStyle: const TextStyle(
               color: Colors.grey,
@@ -164,7 +164,7 @@ class _SignupState extends State<Signup> {
                 borderSide: BorderSide.none,
                 borderRadius: BorderRadius.circular(14),
               ),
-              hintText: 'Enter your email',
+              hintText: AppLocalizations.enterYourEmail,
               hintStyle: const TextStyle(color: Colors.grey),
               contentPadding:
                   const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
@@ -186,7 +186,7 @@ class _SignupState extends State<Signup> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Password',
+          AppLocalizations.password,
           style: GoogleFonts.raleway(
             textStyle: const TextStyle(
               color: Colors.grey, // Szürke szöveg
@@ -210,7 +210,8 @@ class _SignupState extends State<Signup> {
                 borderSide: BorderSide.none,
                 borderRadius: BorderRadius.circular(14),
               ),
-              hintText: 'Enter your password', // Placeholder szöveg
+              hintText:
+                  AppLocalizations.enterYourPassword, // Placeholder szöveg
               hintStyle:
                   const TextStyle(color: Colors.grey), // Szürke placeholder
               contentPadding: const EdgeInsets.symmetric(
@@ -241,7 +242,7 @@ class _SignupState extends State<Signup> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Confirm Password',
+          AppLocalizations.confirmPassword,
           style: GoogleFonts.raleway(
             textStyle: const TextStyle(
               color: Colors.grey,
@@ -264,7 +265,7 @@ class _SignupState extends State<Signup> {
                 borderSide: BorderSide.none,
                 borderRadius: BorderRadius.circular(14),
               ),
-              hintText: 'Confirm your password',
+              hintText: AppLocalizations.confirmYourPassword,
               hintStyle: const TextStyle(color: Colors.grey),
               contentPadding:
                   const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
@@ -370,7 +371,7 @@ class _SignupState extends State<Signup> {
                 ),
                 child: Center(
                   child: Text(
-                    "Sign Up",
+                    AppLocalizations.signUp,
                     style: GoogleFonts.raleway(
                       textStyle: const TextStyle(
                         color: Colors.white,
@@ -406,7 +407,7 @@ class _SignupState extends State<Signup> {
                 ),
                 child: Center(
                   child: Text(
-                    "Back",
+                    AppLocalizations.back,
                     style: GoogleFonts.raleway(
                       textStyle: const TextStyle(
                         color: Colors.white,
@@ -432,7 +433,7 @@ class _SignupState extends State<Signup> {
         text: TextSpan(
           children: [
             TextSpan(
-              text: "Already Have Account? ",
+              text: AppLocalizations.alreadyHaveAccount,
               style: GoogleFonts.raleway(
                 textStyle: const TextStyle(
                   color: Colors.grey, // Szürke szöveg
@@ -442,7 +443,7 @@ class _SignupState extends State<Signup> {
               ),
             ),
             TextSpan(
-              text: "Log In",
+              text: AppLocalizations.logIn,
               style: GoogleFonts.raleway(
                 textStyle: const TextStyle(
                   color: Colors.red, // Piros szöveg

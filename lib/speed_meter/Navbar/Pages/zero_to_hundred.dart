@@ -7,6 +7,7 @@ import '../../widgets/Messages/warning_message.dart';
 import '../../widgets/Messages/success_message.dart';
 import '../../widgets/Messages/result_dialog.dart';
 import '../../../providers/speed_provider.dart';
+import '../../../localization/app_localizations.dart';
 import '../../../services/auth_service.dart';
 import 'package:go_router/go_router.dart';
 
@@ -256,13 +257,13 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
                 if (isMeasurementActive) ...[
                   NoOutlineMeasurementButton(
                     onPressed: _resetMeasurement,
-                    text: "Mégse",
+                    text: AppLocalizations.cancel,
                     backgroundColor: Colors.red,
                   ),
                   if (isTestButtonVisible)
                     NoOutlineMeasurementButton(
                       onPressed: _startSpeedIncrease,
-                      text: "Teszt Sebesség Növelés",
+                      text: AppLocalizations.testSpeedIncrease,
                       backgroundColor: Colors.blue,
                     ),
                 ],
@@ -270,14 +271,14 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
             ),
             if (isMeasurementStarted)
               SuccessMessage(
-                message: "A mérés elkezdődött!",
+                message: AppLocalizations.measurementStarted,
                 icon: Icons.check,
                 color: Color(0xFF0ca644),
                 iconColor: Color(0xFF84D65A),
               ),
             if (showMovementWarning)
               WarningMessage(
-                message: "A jármű mozgásban van!",
+                message: AppLocalizations.vehicleIsMoving,
                 icon: Icons.warning,
                 color: Colors.orange,
                 iconColor: Colors.white,

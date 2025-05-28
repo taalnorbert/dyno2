@@ -3,10 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../meter_painter.dart';
 import '../../../services/auth_service.dart';
-import '../../widgets/Messages/help_dialog.dart';
+import '../../../widgets/settings_dialog.dart'; // Új import hozzáadva
 import '../../../providers/speed_provider.dart';
 import '../../../providers/language_provider.dart';
-import '../../../localization/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 class HomePage extends StatefulWidget {
@@ -95,109 +94,14 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void _showHelpDialog() {
-    showHelpDialog(context);
-  }
 
   void _showSettingsDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: Colors.grey[900],
-              title: Text(
-                AppLocalizations.settings,
-                style: const TextStyle(color: Colors.white),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Speed Unit Setting
-                  ListTile(
-                    title: Text(
-                      AppLocalizations.speedUnit,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    trailing: DropdownButton<bool>(
-                      dropdownColor: Colors.grey[850],
-                      value: _speedProvider.isKmh,
-                      onChanged: (bool? newValue) {
-                        if (newValue != null) {
-                          _speedProvider.setSpeedUnit(newValue);
-                          setState(() {});
-                        }
-                      },
-                      items: const [
-                        DropdownMenuItem(
-                          value: true,
-                          child: Text('km/h',
-                              style: TextStyle(color: Colors.white)),
-                        ),
-                        DropdownMenuItem(
-                          value: false,
-                          child: Text('mph',
-                              style: TextStyle(color: Colors.white)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Language Setting
-                  ListTile(
-                    title: Text(
-                      AppLocalizations.language,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    trailing: DropdownButton<String>(
-                      dropdownColor: Colors.grey[850],
-                      value: _languageProvider.languageCode,
-                      onChanged: (String? newValue) {
-                        if (newValue != null) {
-                          _languageProvider.setLanguage(newValue);
-                          setState(() {});
-                        }
-                      },
-                      items: [
-                        DropdownMenuItem(
-                          value: 'hu',
-                          child: Text(AppLocalizations.hungarian,
-                              style: const TextStyle(color: Colors.white)),
-                        ),
-                        DropdownMenuItem(
-                          value: 'en',
-                          child: Text(AppLocalizations.english,
-                              style: const TextStyle(color: Colors.white)),
-                        ),
-                        DropdownMenuItem(
-                          value: 'de',
-                          child: Text(AppLocalizations.german,
-                              style: const TextStyle(color: Colors.white)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Information Button
-                  ListTile(
-                    title: Text(
-                      AppLocalizations.information,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(
-                        Icons.info_outline,
-                        color: Colors.blue,
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context); // Close settings dialog
-                        _showHelpDialog(); // Show help dialog
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+        return SettingsDialog(
+          speedProvider: _speedProvider,
+          languageProvider: _languageProvider,
         );
       },
     );

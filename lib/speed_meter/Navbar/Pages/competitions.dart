@@ -6,6 +6,7 @@ import '../../../providers/language_provider.dart';
 import '../../../localization/app_localizations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
+import 'dart:convert';
 
 class CompetitionsPage extends StatefulWidget {
   const CompetitionsPage({super.key});
@@ -218,6 +219,8 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                 'car': car,
                 'time': time,
                 'isCurrentUser': isCurrentUser,
+                'userId':
+                    userId, // Add the userId to the map for user profile retrieval
               };
             }
           }).catchError((e) {
@@ -229,6 +232,8 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                 'car': car,
                 'time': time,
                 'isCurrentUser': false,
+                'userId':
+                    userId, // Add the userId to the map for user profile retrieval
               };
             }
             // ignore: avoid_print
@@ -411,8 +416,8 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                     ),
                     child: Row(
                       children: [
+                        // SizedBox(width: 30), // Helyezés számának helye
                         Expanded(
-                          flex: 5,
                           child: Text(
                             _languageProvider.isHungarian
                                 ? "Felhasználó"
@@ -420,21 +425,6 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                                     ? "Benutzer"
                                     : "User",
                             textAlign: TextAlign.left,
-                            style: TextStyle(
-                              color: _textWhite,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 5,
-                          child: Text(
-                            _languageProvider.isHungarian
-                                ? "Autó"
-                                : _languageProvider.isGerman
-                                    ? "Auto"
-                                    : "Car",
-                            textAlign: TextAlign.center,
                             style: TextStyle(
                               color: _textWhite,
                               fontWeight: FontWeight.bold,
@@ -599,76 +589,70 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
           index % 2 == 0 ? _accentGrey.withOpacity(0.3) : Colors.transparent;
     }
 
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      child: Row(
-        children: [
-          // Helyezés vagy mérés száma
-          SizedBox(
-            width: 30,
-            child: Text(
-              "${index + 1}.",
-              style: TextStyle(
-                color: rankColor ?? _textWhite,
-                fontWeight:
-                    rankColor != null ? FontWeight.bold : FontWeight.normal,
-                fontSize: rankColor != null ? 16 : 14,
+    return InkWell(
+      onTap: () {
+        // Only show user details when tapping on daily leaderboard items that aren't the current user
+        if (!_showPersonalResults && item['username'] != 'Te') {
+          _showUserDetailsDialog(item);
+        }
+      },
+      child: Container(
+        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        child: Row(
+          children: [
+            // Helyezés vagy mérés száma
+            SizedBox(
+              width: 30,
+              child: Text(
+                "${index + 1}.",
+                style: TextStyle(
+                  color: rankColor ?? _textWhite,
+                  fontWeight:
+                      rankColor != null ? FontWeight.bold : FontWeight.normal,
+                  fontSize: rankColor != null ? 16 : 14,
+                ),
               ),
             ),
-          ),
 
-          // Felhasználói név
-          Expanded(
-            flex: 5,
-            child: Text(
-              item['username'],
-              style: TextStyle(
-                color: _showPersonalResults || item['username'] == 'Te'
-                    ? _primaryRed
-                    : _textWhite,
-                fontWeight: rankColor != null ||
-                        _showPersonalResults ||
-                        item['username'] == 'Te'
-                    ? FontWeight.bold
-                    : FontWeight.normal,
+            // Felhasználói név
+            Expanded(
+              child: Text(
+                item['username'],
+                style: TextStyle(
+                  color: _showPersonalResults || item['username'] == 'Te'
+                      ? _primaryRed
+                      : _textWhite,
+                  fontWeight: rankColor != null ||
+                          _showPersonalResults ||
+                          item['username'] == 'Te'
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                ),
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.left,
               ),
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.left,
             ),
-          ),
 
-          // Autó típus
-          Expanded(
-            flex: 5,
-            child: Text(
-              item['car'],
-              style: TextStyle(
-                color: Colors.white70,
-              ),
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-            ),
-          ),
-
-          // Idő
-          Container(
-            width: 80,
-            alignment: Alignment.centerRight,
-            child: Text(
-              "${item['time'].toStringAsFixed(1)} ${_getTimeUnit()}",
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                color: rankColor ?? _textWhite,
-                fontWeight: FontWeight.bold,
+            // Idő
+            Container(
+              width: 80,
+              alignment: Alignment.centerRight,
+              child: Text(
+                "${item['time'].toStringAsFixed(1)} ${_getTimeUnit()}",
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  color: rankColor ?? _textWhite,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -748,6 +732,306 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
         final item = data[index];
         return _buildLeaderboardItem(index, item);
       },
+    );
+  }
+
+  void _showUserDetailsDialog(Map<String, dynamic> item) async {
+    // Get the user ID associated with this leaderboard item
+    String? userId = item['userId'];
+
+    // If we don't have the userId in the item, we can't fetch user details
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not load user details')),
+      );
+      return;
+    }
+
+    // Show loading dialog first
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: _cardBlack,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: _primaryRed),
+                SizedBox(height: 16),
+                Text(
+                  _languageProvider.isHungarian
+                      ? 'Felhasználói adatok betöltése...'
+                      : _languageProvider.isGerman
+                          ? 'Benutzerinformationen laden...'
+                          : 'Loading user details...',
+                  style: TextStyle(color: _textWhite),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    try {
+      // Fetch user document from Firestore
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+
+      if (!mounted) return;
+
+      // Close the loading dialog
+      Navigator.of(context, rootNavigator: true).pop();
+
+      if (!userDoc.exists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('User profile not found')),
+        );
+        return;
+      }
+
+      final userData = userDoc.data()!;
+
+      // Get the profile image as a base64 string - use the correct field name
+      final profileImageBase64 = userData[
+          'profileImage']; // Changed from 'profileImageUrl' to 'profileImage'
+
+      // Debug check for profile image
+      if (profileImageBase64 != null) {
+        // ignore: avoid_print
+        print(
+            'Found profile image, length: ${profileImageBase64.toString().length}');
+      } else {
+        // ignore: avoid_print
+        print('No profile image found for user');
+      }
+
+      // Show the actual user details dialog
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return Dialog(
+            backgroundColor: _cardBlack,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Profile image with base64 handling
+                  profileImageBase64 != null
+                      ? CircleAvatar(
+                          radius: 50,
+                          backgroundColor: _accentGrey,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: _primaryRed,
+                                width: 2.0,
+                              ),
+                            ),
+                            child: ClipOval(
+                              child: Image.memory(
+                                base64Decode(profileImageBase64),
+                                width: 100,
+                                height: 100,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  // ignore: avoid_print
+                                  print('Error loading profile image: $error');
+                                  return Icon(Icons.person,
+                                      size: 50, color: _textWhite);
+                                },
+                              ),
+                            ),
+                          ),
+                        )
+                      : CircleAvatar(
+                          radius: 50,
+                          backgroundColor: _accentGrey,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: _primaryRed,
+                                width: 2.0,
+                              ),
+                            ),
+                            child: ClipOval(
+                              child: Icon(Icons.person,
+                                  size: 50, color: _textWhite),
+                            ),
+                          ),
+                        ),
+                  SizedBox(height: 16),
+
+                  // Nickname
+                  Text(
+                    userData['nickname'] ?? item['username'],
+                    style: TextStyle(
+                      color: _textWhite,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+
+                  // Car
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.directions_car, color: _primaryRed, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        userData['currentCar'] ?? item['car'] ?? 'Unknown Car',
+                        style: TextStyle(
+                          color: _textWhite,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+
+                  // Bio if available
+                  if (userData['bio'] != null &&
+                      userData['bio'].toString().isNotEmpty)
+                    Container(
+                      margin: EdgeInsets.only(top: 8),
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: _accentGrey,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      width: double.infinity,
+                      child: Text(
+                        userData['bio'],
+                        style: TextStyle(color: Colors.white70),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+
+                  // Stats
+                  Container(
+                    margin: EdgeInsets.only(top: 16),
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _accentGrey,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          _languageProvider.isHungarian
+                              ? 'Statisztikák'
+                              : _languageProvider.isGerman
+                                  ? 'Statistik'
+                                  : 'Statistics',
+                          style: TextStyle(
+                            color: _textWhite,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _buildStatItem(
+                              _languageProvider.isHungarian
+                                  ? 'Mérések'
+                                  : _languageProvider.isGerman
+                                      ? 'Messungen'
+                                      : 'Measurements',
+                              userData['totalMeasurements']?.toString() ?? '0',
+                            ),
+                            _buildStatItem(
+                              _languageProvider.isHungarian
+                                  ? 'Legjobb idő'
+                                  : _languageProvider.isGerman
+                                      ? 'Beste Zeit'
+                                      : 'Best Time',
+                              '${item['time'].toStringAsFixed(1)} ${_getTimeUnit()}',
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(height: 16),
+
+                  // Close button
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: TextButton.styleFrom(
+                      foregroundColor: _textWhite,
+                      backgroundColor: _primaryRed,
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      _languageProvider.isHungarian
+                          ? 'Bezárás'
+                          : _languageProvider.isGerman
+                              ? 'Schließen'
+                              : 'Close',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error fetching user details: $e');
+
+      if (mounted) {
+        // Close the loading dialog if it's still open
+        Navigator.of(context, rootNavigator: true).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Error loading user details: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  // Helper method to build a statistic item
+  Widget _buildStatItem(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            color: _primaryRed,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: 12,
+          ),
+        ),
+      ],
     );
   }
 }

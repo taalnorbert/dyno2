@@ -212,7 +212,7 @@ class _QuarterMileState extends State<QuarterMile> {
             _speedProvider.isKmh ? 402 : 0, // Ez csak egy megjelenítési szám
             () {
               if (mounted) {
-                context.go('/home');
+                context.pop(); // Visszamegy az előző oldalra
               }
             },
             resultText: "¼ Mile Time", // Módosított eredménykiírás
@@ -229,7 +229,7 @@ class _QuarterMileState extends State<QuarterMile> {
             _speedProvider.isKmh ? 402 : 0,
             () {
               if (mounted) {
-                context.go('/home');
+                context.pop(); // Visszamegy az előző oldalra
               }
             },
             resultText: "¼ Mile Time", // Itt is módosítva
@@ -254,7 +254,7 @@ class _QuarterMileState extends State<QuarterMile> {
     });
 
     if (mounted) {
-      context.go('/home');
+      context.pop(); // Visszamegy az előző oldalra
     }
   }
 

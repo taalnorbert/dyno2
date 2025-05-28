@@ -188,7 +188,7 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
             _speedProvider.secondTargetSpeed.toInt(),
             () {
               if (mounted) {
-                context.go('/home');
+                context.pop(); // Visszamegy az előző oldalra
               }
             },
           );
@@ -204,7 +204,7 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
             _speedProvider.secondTargetSpeed.toInt(),
             () {
               if (mounted) {
-                context.go('/home');
+                context.pop(); // Visszamegy az előző oldalra
               }
             },
           );
@@ -225,8 +225,10 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
     _measurementTimer?.cancel();
     _measurementTimer = null;
 
-    // Opcionálisan visszatérés a Home oldalra
-    context.go('/home');
+    // Visszamegy az előző oldalra
+    if (mounted) {
+      context.pop();
+    }
   }
 
   void _startSpeedIncrease() {

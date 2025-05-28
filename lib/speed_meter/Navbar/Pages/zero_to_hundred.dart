@@ -166,7 +166,7 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
             _speedProvider.firstTargetSpeed.toInt(),
             () {
               if (mounted) {
-                context.go('/home');
+                context.pop(); // Visszamegy az előző oldalra
               }
             },
           );
@@ -181,7 +181,7 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
             _speedProvider.firstTargetSpeed.toInt(),
             () {
               if (mounted) {
-                context.go('/home');
+                context.pop(); // Visszamegy az előző oldalra
               }
             },
           );
@@ -204,9 +204,9 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
     _measurementTimer?.cancel();
     _measurementTimer = null;
 
-    // Replace Navigator.pop with context.go
+    // Replace Navigator.pop with context.pop
     if (mounted) {
-      context.go('/home'); // Navigate back to home using go_router
+      context.pop(); // Visszamegy az előző oldalra go_router helyett
     }
   }
 

@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import '../providers/speed_provider.dart';
 import '../providers/language_provider.dart';
@@ -65,7 +67,7 @@ class SettingsDialog extends StatelessWidget {
               children: [
                 // Header - kompaktabb
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [Colors.red.shade600, Colors.red.shade800],

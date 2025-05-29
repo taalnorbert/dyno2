@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dyno2/services/auth_service.dart';
 import 'package:dyno2/speed_meter/Navbar/Pages/home.dart';
 import 'package:flutter/gestures.dart';
@@ -71,6 +73,86 @@ class _LoginState extends State<Login> {
     }
   }
 
+  Widget _googleSignInButton() {
+    return Container(
+      width: 300,
+      margin: const EdgeInsets.only(top: 20),
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _handleGoogleSignIn,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/google_logo.png',
+              height: 24,
+              width: 24,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              "Google bejelentkezés",
+              style: GoogleFonts.raleway(
+                textStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Kezelőfüggvény a Google bejelentkezéshez
+  void _handleGoogleSignIn() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Indítsuk el a Google bejelentkezést - egyszerűsített verzió, kevesebb várakozással
+      final userCredential = await _authService.signInWithGoogle();
+
+      // Közvetlenül ellenőrizzük az eredményt, nem használunk Completert
+      if (userCredential == null) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _showWarning('Google bejelentkezés megszakítva.');
+          });
+        }
+        return;
+      }
+
+      // Explicit módon állítsuk le a betöltést, ha mégsem frissülne a UI
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+
+      // Ha a UI nem frissül automatikusan, explicit módon navigáljunk
+      if (mounted && _authService.currentUser != null) {
+        context.go('/home');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _showWarning('Google bejelentkezési hiba: ${e.toString()}');
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
@@ -122,6 +204,39 @@ class _LoginState extends State<Login> {
                               _forgotPassword(),
                               const SizedBox(height: 20),
                               _combinedLoginButtons(context),
+
+                              // Vagy szöveg, vagy elválasztó
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 15),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 100,
+                                      height: 1,
+                                      color: Colors.grey[700],
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10),
+                                      child: Text(
+                                        "vagy",
+                                        style:
+                                            TextStyle(color: Colors.grey[500]),
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 100,
+                                      height: 1,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Google bejelentkezés gomb
+                              _googleSignInButton(),
                             ],
                           ),
                         ),
@@ -139,7 +254,17 @@ class _LoginState extends State<Login> {
                 ),
               ),
               // Itt használom a LoadingOverlay-t a korábbi egyedi megoldás helyett
-              if (_isLoading) const LoadingOverlay(),
+              if (_isLoading)
+                LoadingOverlay(
+                  onTimeout: () {
+                    // Ez fog lefutni, ha az overlay időtúllépés miatt bezáródna
+                    setState(() {
+                      _isLoading = false;
+                    });
+                    // Megjelenítünk egy hibaüzenetet
+                    _showWarning('A művelet túl sok időt vett igénybe.');
+                  },
+                ),
             ],
           );
         }

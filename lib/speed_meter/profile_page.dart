@@ -28,7 +28,6 @@ class _ProfilePageState extends State<ProfilePage> {
   final _instagramController = TextEditingController();
   String? _instagramUsername;
 
-  
   @override
   void initState() {
     super.initState();
@@ -1474,80 +1473,121 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // Add this new method to handle nickname editing with a dialog
   void _showEditNicknameDialog() {
+    // Képernyő méretének lekérése a reszponzivitáshoz
+    final screenSize = MediaQuery.of(context).size;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF161616),
+      builder: (context) => Dialog(
+        // AlertDialog helyett sima Dialog widget használata a jobb méretezésért
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+        child: Container(
+          // Dinamikus szélesség a képernyőméret alapján
+          width: screenSize.width > 600 ? 400 : screenSize.width * 0.85,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF161616),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // Minimális méret használata
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Rugalmas címsor
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child:
+                        const Icon(Icons.person, color: Colors.red, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  // Expanded widget biztosítja, hogy a szöveg ne csorduljon túl
+                  Expanded(
+                    child: Text(
+                      AppLocalizations.editNickname,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow
+                          .ellipsis, // Hosszú szövegeknél három pont
+                    ),
+                  ),
+                ],
               ),
-              child: const Icon(Icons.person, color: Colors.red, size: 20),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              AppLocalizations.editNickname,
-              style: const TextStyle(color: Colors.white),
-            ),
-          ],
-        ),
-        content: TextField(
-          controller: _nicknameController,
-          style: const TextStyle(color: Colors.white),
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: AppLocalizations.enterNickname,
-            hintStyle: TextStyle(color: Colors.grey[500]),
-            filled: true,
-            fillColor: const Color(0xFF212121),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            counterText: '${_nicknameController.text.length}/10',
-            counterStyle: TextStyle(
-              color: _nicknameController.text.length > 10
-                  ? Colors.red
-                  : Colors.grey,
-            ),
-          ),
-          maxLength: 10,
-          onChanged: (value) {
-            setState(() {});
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.grey,
-            ),
-            child: Text(AppLocalizations.cancel.toUpperCase()),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              _submitNickname(_nicknameController.text);
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+              const SizedBox(height: 16),
+
+              // Beviteli mező
+              TextField(
+                controller: _nicknameController,
+                style: const TextStyle(color: Colors.white),
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: AppLocalizations.enterNickname,
+                  hintStyle: TextStyle(color: Colors.grey[500]),
+                  filled: true,
+                  fillColor: const Color(0xFF212121),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  counterText: '${_nicknameController.text.length}/10',
+                  counterStyle: TextStyle(
+                    color: _nicknameController.text.length > 10
+                        ? Colors.red
+                        : Colors.grey,
+                  ),
+                ),
+                maxLength: 10,
+                onChanged: (value) {
+                  setState(() {});
+                },
               ),
-            ),
-            child: Text(AppLocalizations.save.toUpperCase()),
+              const SizedBox(height: 16),
+
+              // Gombokat tartalmazó sor
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.grey,
+                    ),
+                    child: Text(AppLocalizations.cancel.toUpperCase()),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      _submitNickname(_nicknameController.text);
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(AppLocalizations.save.toUpperCase()),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

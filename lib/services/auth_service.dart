@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -7,11 +9,13 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:go_router/go_router.dart';
 import 'package:dyno2/speed_meter/widgets/Messages/warning_message.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
   final logger = Logger();
   get userStream => null;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   User? get currentUser => _auth.currentUser;
 
@@ -350,11 +354,82 @@ class AuthService {
     }
   }
 
+  // Google Sign-In method
+  Future<UserCredential?> signInWithGoogle() async {
+    try {
+      // Töröljük az előző bejelentkezési kísérleteket
+      await _googleSignIn.signOut();
+
+      // Indítsuk újra a bejelentkezést
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      if (googleUser == null) {
+        // A felhasználó megszakította a bejelentkezést
+        logger.i('Google sign-in was canceled by user');
+        return null;
+      }
+
+      // Google Auth részletek lekérése - állítsunk be időtúllépést
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication.timeout(
+        Duration(seconds: 25),
+        onTimeout: () {
+          throw TimeoutException('Google authentication timed out');
+        },
+      );
+
+      // Credential létrehozása a Firebase számára
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Bejelentkezés Firebase-be a Google credential-lel
+      final UserCredential userCredential =
+          await _auth.signInWithCredential(credential).timeout(
+        Duration(seconds: 25),
+        onTimeout: () {
+          throw TimeoutException('Firebase authentication timed out');
+        },
+      );
+
+      // Ha új felhasználó, létrehozzuk a Firestore dokumentumot
+      if (userCredential.additionalUserInfo?.isNewUser ?? false) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+          'email': userCredential.user!.email,
+          'nickname': userCredential.user!.displayName ??
+              userCredential.user!.email!.split('@')[0],
+          'registrationTime': FieldValue.serverTimestamp(),
+          'isVerified': true, // Google felhasználók automatikusan ellenőrzöttek
+        });
+
+        logger.i(
+            'New user registered with Google: ${userCredential.user!.email}');
+      }
+
+      return userCredential;
+    } catch (e) {
+      // Törölni kell a függőben lévő Google bejelentkezést hiba esetén
+      try {
+        await _googleSignIn.signOut();
+      } catch (_) {}
+
+      logger.e('Error signing in with Google:',
+          error: e, stackTrace: StackTrace.current);
+      return null;
+    }
+  }
+
   Future<void> signout({
     required BuildContext context,
   }) async {
     await FirebaseAuth.instance.signOut();
-    // ignore: use_build_context_synchronously
+    await _googleSignIn.signOut(); // Google kijelentkezés is
+
+    if (!context.mounted) return;
     context.go('/login');
   }
 
@@ -605,36 +680,35 @@ class AuthService {
   }
 
 // This would go in your AuthService class
-Future<String?> getInstagramUsername() async {
-  try {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return null;
+  Future<String?> getInstagramUsername() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
 
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get();
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
 
-    return doc.data()?['instagramUsername'] as String?;
-  } catch (e) {
-    // ignore: avoid_print
-    print('Error getting Instagram username: $e');
-    return null;
+      return doc.data()?['instagramUsername'] as String?;
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error getting Instagram username: $e');
+      return null;
+    }
   }
-}
 
-Future<void> updateInstagramUsername(String username) async {
-  try {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) throw 'User not logged in';
+  Future<void> updateInstagramUsername(String username) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw 'User not logged in';
 
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .update({'instagramUsername': username});
-  } catch (e) {
-    throw 'Failed to update Instagram username: $e';
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({'instagramUsername': username});
+    } catch (e) {
+      throw 'Failed to update Instagram username: $e';
+    }
   }
-}
-
 }

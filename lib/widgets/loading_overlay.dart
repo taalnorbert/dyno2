@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'package:go_router/go_router.dart';
 
 class LoadingOverlay extends StatefulWidget {
   final Duration timeout;
@@ -81,7 +82,11 @@ class _LoadingOverlayState extends State<LoadingOverlay> {
                           }
                           // Ha nincs callback, akkor alapértelmezés szerint lépjünk vissza
                           else {
-                            Navigator.of(context).pop();
+                            if (Navigator.of(context).canPop()) {
+                              context.pop();
+                            } else {
+                              context.go('/');
+                            }
                           }
                         },
                         style: ElevatedButton.styleFrom(

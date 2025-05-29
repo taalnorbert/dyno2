@@ -33,6 +33,7 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         minSdkVersion 23
+        multiDexEnabled true // Add ezt!
     }
 
     buildTypes {
@@ -46,4 +47,9 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    implementation "androidx.multidex:multidex:2.0.1" // És ezt!
+    // ...más függőségek...
 }

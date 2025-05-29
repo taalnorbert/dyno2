@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'dart:io';
@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dyno2/widgets/loading_overlay.dart'; // Importáljuk a LoadingOverlay-t
+import '../localization/app_localizations.dart';
 
 class ProfilePage extends StatefulWidget {
   final String userEmail;
@@ -18,14 +19,16 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   String? _nickname;
-  bool _isEditingNickname = false;
   final _nicknameController = TextEditingController();
   final _carController = TextEditingController(); // Add this
   String? _profileImageUrl;
   final _imagePicker = ImagePicker();
   String? _selectedCar;
   bool _isLoading = false; // Aktuális loading állapot tárolásához
+  final _instagramController = TextEditingController();
+  String? _instagramUsername;
 
+  
   @override
   void initState() {
     super.initState();
@@ -34,13 +37,15 @@ class _ProfilePageState extends State<ProfilePage> {
       if (mounted) _loadNickname();
       if (mounted) _loadProfileImage();
       if (mounted) _loadSelectedCar();
+      if (mounted) _loadInstagramUsername(); // Add this line
     });
   }
 
   @override
   void dispose() {
     _nicknameController.dispose();
-    _carController.dispose(); // Add this
+    _carController.dispose();
+    _instagramController.dispose(); // Add this line
     super.dispose();
   }
 
@@ -60,13 +65,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
       setState(() {
         _nickname = newNickname;
-        _isEditingNickname = false;
       });
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Becenév sikeresen módosítva!'),
+        SnackBar(
+          content: Text(AppLocalizations.nicknameUpdated),
           backgroundColor: Colors.green,
         ),
       );
@@ -118,8 +122,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profilkép sikeresen módosítva!'),
+        SnackBar(
+          content: Text(AppLocalizations.profilePictureUpdated),
           backgroundColor: Colors.green,
         ),
       );
@@ -168,8 +172,58 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Car updated successfully!'),
+        SnackBar(
+          content: Text(AppLocalizations.carUpdated),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _safeSetState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _loadInstagramUsername() async {
+    try {
+      if (!mounted) return;
+      final username = await AuthService().getInstagramUsername();
+      if (!mounted) return;
+      setState(() {
+        _instagramUsername = username;
+      });
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error loading Instagram username: $e');
+    }
+  }
+
+  Future<void> _updateInstagramUsername(String username) async {
+    try {
+      _safeSetState(() {
+        _isLoading = true;
+      });
+
+      await AuthService().updateInstagramUsername(username);
+
+      if (!mounted) return;
+      _safeSetState(() {
+        _instagramUsername = username;
+        _isLoading = false;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.instagramUpdated),
           backgroundColor: Colors.green,
         ),
       );
@@ -189,64 +243,132 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showCarSelectionDialog() {
-    _carController.text = _selectedCar ?? ''; // Set initial value
+    _carController.text = _selectedCar ?? '';
+    bool hasError = false;
+    String errorMessage = '';
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.grey[900],
-          title: const Row(
-            children: [
-              Icon(Icons.directions_car, color: Colors.blue),
-              SizedBox(width: 10),
-              Text(
-                'Select Car',
-                style: TextStyle(color: Colors.white),
-              ),
-            ],
-          ),
-          content: TextField(
-            controller: _carController, // Use the class property
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Enter car model',
-              hintStyle: TextStyle(color: Colors.grey[400]),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Colors.white54),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Colors.blue),
-              ),
+        return StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+          return AlertDialog(
+            backgroundColor: Colors.grey[900],
+            title: Row(
+              children: [
+                const Icon(Icons.directions_car, color: Colors.blue),
+                const SizedBox(width: 10),
+                Text(
+                  AppLocalizations.selectCar,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ],
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Colors.white70),
-              ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: _carController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: AppLocalizations.enterCarModel,
+                    hintStyle: TextStyle(color: Colors.grey[400]),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                        color: hasError ? Colors.red : Colors.white54,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                        color: hasError ? Colors.red : Colors.blue,
+                      ),
+                    ),
+                    counterText: "${_carController.text.length}/25",
+                    counterStyle: TextStyle(
+                      color: _carController.text.length > 25
+                          ? Colors.red
+                          : Colors.grey,
+                    ),
+                  ),
+                  maxLength: 25,
+                  onChanged: (value) {
+                    // Clear error when typing
+                    setState(() {
+                      hasError = false;
+                      errorMessage = '';
+                    });
+                  },
+                ),
+                if (hasError)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0, left: 4.0),
+                    child: Text(
+                      errorMessage,
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0, left: 4.0),
+                  child: Text(
+                    AppLocalizations.carExamples,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ),
+              ],
             ),
-            ElevatedButton(
-              onPressed: () {
-                if (_carController.text.isNotEmpty) {
-                  _updateSelectedCar(_carController.text);
-                  Navigator.pop(context);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  AppLocalizations.cancel,
+                  style: const TextStyle(color: Colors.white70),
                 ),
               ),
-              child: const Text('Save'),
-            ),
-          ],
-        );
+              ElevatedButton(
+                onPressed: () {
+                  final carModel = _carController.text.trim();
+
+                  if (carModel.isEmpty) {
+                    setState(() {
+                      hasError = true;
+                      errorMessage = AppLocalizations.carModelEmpty;
+                    });
+                    return;
+                  }
+
+                  if (carModel.length < 2) {
+                    setState(() {
+                      hasError = true;
+                      errorMessage = AppLocalizations.carModelTooShort;
+                    });
+                    return;
+                  }
+
+                  if (carModel.length > 25) {
+                    setState(() {
+                      hasError = true;
+                      errorMessage = AppLocalizations.carModelTooLong;
+                    });
+                    return;
+                  }
+
+                  _updateSelectedCar(carModel);
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Text(AppLocalizations.save),
+              ),
+            ],
+          );
+        });
       },
     );
   }
@@ -258,22 +380,23 @@ class _ProfilePageState extends State<ProfilePage> {
       builder: (dialogContext) {
         return AlertDialog(
           backgroundColor: Colors.grey[900],
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
-              SizedBox(width: 10),
+              const Icon(Icons.warning_amber_rounded,
+                  color: Colors.red, size: 28),
+              const SizedBox(width: 10),
               Text(
-                'Fiók törlése',
-                style: TextStyle(
+                AppLocalizations.deleteAccount,
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-          content: const Text(
-            'Biztosan törölni szeretnéd a fiókodat?\nEz a művelet nem visszavonható!',
-            style: TextStyle(color: Colors.white70, height: 1.5),
+          content: Text(
+            AppLocalizations.deleteAccountConfirmation,
+            style: const TextStyle(color: Colors.white70, height: 1.5),
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -281,9 +404,9 @@ class _ProfilePageState extends State<ProfilePage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text(
-                'Mégse',
-                style: TextStyle(color: Colors.white70, fontSize: 16),
+              child: Text(
+                AppLocalizations.cancel,
+                style: const TextStyle(color: Colors.white70, fontSize: 16),
               ),
             ),
             ElevatedButton(
@@ -326,9 +449,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 elevation: 3,
               ),
-              child: const Text(
-                'Törlés',
-                style: TextStyle(
+              child: Text(
+                AppLocalizations.deleteAccount,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -457,7 +580,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             Navigator.of(dialogContext).pop();
                           },
                     child: Text(
-                      'Mégse',
+                      AppLocalizations.cancel.toUpperCase(),
                       style: TextStyle(
                         color: isLoading ? Colors.grey : Colors.white70,
                         fontSize: 16,
@@ -572,7 +695,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     child: Text(
-                      'Módosítás',
+                      AppLocalizations.changePassword.toUpperCase(),
                       style: TextStyle(
                         color: isLoading ? Colors.grey : Colors.white,
                         fontSize: 16,
@@ -604,22 +727,22 @@ class _ProfilePageState extends State<ProfilePage> {
       builder: (dialogContext) {
         return AlertDialog(
           backgroundColor: Colors.grey[900],
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.logout, color: Colors.red, size: 28),
-              SizedBox(width: 10),
+              const Icon(Icons.logout, color: Colors.red, size: 28),
+              const SizedBox(width: 10),
               Text(
-                'Kijelentkezés',
-                style: TextStyle(
+                AppLocalizations.logOut,
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-          content: const Text(
-            'Biztosan ki szeretnél jelentkezni?',
-            style: TextStyle(color: Colors.white70),
+          content: Text(
+            AppLocalizations.logoutConfirmation,
+            style: const TextStyle(color: Colors.white70),
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -627,9 +750,9 @@ class _ProfilePageState extends State<ProfilePage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text(
-                'Mégse',
-                style: TextStyle(color: Colors.white70, fontSize: 16),
+              child: Text(
+                AppLocalizations.cancel,
+                style: const TextStyle(color: Colors.white70, fontSize: 16),
               ),
             ),
             ElevatedButton(
@@ -666,9 +789,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 elevation: 3,
               ),
-              child: const Text(
-                'Kijelentkezés',
-                style: TextStyle(
+              child: Text(
+                AppLocalizations.logOut,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -681,80 +804,12 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildNicknameSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.person, color: Colors.blue),
-          const SizedBox(width: 10),
-          if (_isEditingNickname)
-            Expanded(
-              child: TextField(
-                controller: _nicknameController,
-                style: const TextStyle(color: Colors.white, fontSize: 18),
-                decoration: InputDecoration(
-                  hintText: 'Max 10 karakter',
-                  hintStyle: TextStyle(color: Colors.grey[400]),
-                  border: InputBorder.none,
-                  counterText: "${_nicknameController.text.length}/10",
-                  counterStyle: TextStyle(
-                    color: _nicknameController.text.length > 10
-                        ? Colors.red
-                        : Colors.grey,
-                  ),
-                ),
-                maxLength: 10, // Korlátozás 10 karakterre
-                onSubmitted: _submitNickname,
-                onChanged: (value) {
-                  // Az onChanged miatt frissül a számláló
-                  setState(() {});
-                },
-              ),
-            )
-          else
-            Text(
-              _nickname ?? 'Nincs becenév',
-              style: const TextStyle(
-                fontSize: 18,
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          const SizedBox(width: 10),
-          IconButton(
-            icon: Icon(
-              _isEditingNickname ? Icons.check : Icons.edit,
-              color: Colors.blue,
-              size: 20,
-            ),
-            onPressed: () {
-              if (_isEditingNickname) {
-                _submitNickname(_nicknameController.text);
-              } else {
-                _nicknameController.text = _nickname ?? '';
-                setState(() {
-                  _isEditingNickname = true;
-                });
-              }
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
   void _submitNickname(String value) async {
     if (value.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('A becenév nem lehet üres!'),
+        SnackBar(
+          content: Text(AppLocalizations.emptyNickname),
           backgroundColor: Colors.red,
         ),
       );
@@ -764,8 +819,8 @@ class _ProfilePageState extends State<ProfilePage> {
     if (value.length > 10) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('A becenév maximum 10 karakter lehet!'),
+        SnackBar(
+          content: Text(AppLocalizations.nicknameTooLong),
           backgroundColor: Colors.red,
         ),
       );
@@ -774,9 +829,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     // Ellenőrizzük, hogy a jelenlegi becenév nem ugyanaz-e
     if (value == _nickname) {
-      _safeSetState(() {
-        _isEditingNickname = false;
-      });
+      _safeSetState(() {});
       return;
     }
 
@@ -803,177 +856,81 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Widget _buildProfileAvatar() {
-    return GestureDetector(
-      onTap: _updateProfileImage,
-      child: Stack(
-        children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.blue, width: 2),
-              color: Colors.grey[900],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(50),
-              child: _profileImageUrl != null
-                  ? Image.memory(
-                      base64Decode(_profileImageUrl!),
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.person,
-                        size: 50,
-                        color: Colors.blue,
-                      ),
-                    )
-                  : const Icon(
-                      Icons.person,
-                      size: 50,
-                      color: Colors.blue,
-                    ),
-            ),
-          ),
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.blue,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.black, width: 2),
-              ),
-              child: const Icon(
-                Icons.camera_alt,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
         Scaffold(
-          appBar: AppBar(
-            title: const Text(
-              'Profil',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-            centerTitle: true,
-            backgroundColor: Colors.black,
-            elevation: 0,
-          ),
           backgroundColor: Colors.black,
-          body: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
-                  _buildProfileAvatar(), // Replace the existing Container with this
-                  const SizedBox(height: 20),
-                  // Nickname Section
-                  _buildNicknameSection(),
-                  const SizedBox(height: 15),
-                  // Email Display
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[900],
-                      borderRadius: BorderRadius.circular(15),
+          body: Stack(
+            children: [
+              // Gradient background that extends below the app bar
+              Container(
+                height: 250, // Extend beyond the app bar
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.red.shade900,
+                      Colors.red.shade900.withOpacity(0.7),
+                      Colors.red.shade900.withOpacity(0.3),
+                      Colors.black,
+                    ],
+                    stops: const [0.0, 0.3, 0.6, 0.9],
+                  ),
+                ),
+              ),
+              CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  // App Bar with transparent background to show gradient behind
+                  SliverAppBar(
+                    pinned: true,
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    title: Text(
+                      AppLocalizations.profile,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.email, color: Colors.blue),
-                        const SizedBox(width: 10),
-                        Text(
-                          widget.userEmail,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                    centerTitle: true,
+                  ),
+
+                  // Content with spacing to start after the gradient fade
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                      child: Column(
+                        children: [
+                          // Profile header with avatar
+                          _buildProfileHeader(),
+
+                          const SizedBox(height: 24),
+
+                          // Main sections
+                          _buildSectionHeader(
+                              AppLocalizations.accountInformation),
+                          const SizedBox(height: 16),
+                          _buildInfoCard(),
+
+                          const SizedBox(height: 24),
+
+                          _buildSectionHeader(AppLocalizations.accountSettings),
+                          const SizedBox(height: 16),
+                          _buildActionButtonsGroup(),
+
+                          const SizedBox(height: 50),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 30),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[900],
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.directions_car, color: Colors.blue),
-                        const SizedBox(width: 10),
-                        Text(
-                          _selectedCar ?? 'No car selected',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.edit,
-                            color: Colors.blue,
-                            size: 20,
-                          ),
-                          onPressed: _showCarSelectionDialog,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                  // Action Buttons
-                  _buildActionButton(
-                    icon: Icons.lock,
-                    label: 'Jelszó módosítása',
-                    color: Colors.green,
-                    onPressed: () => _changePassword(context),
-                  ),
-                  const SizedBox(height: 15),
-                  _buildActionButton(
-                    icon: Icons.delete_outline,
-                    label: 'Fiók törlése',
-                    color: Colors.red.shade900,
-                    onPressed: () => _showDeleteConfirmationDialog(context),
-                  ),
-                  const SizedBox(height: 15),
-                  _buildActionButton(
-                    icon: Icons.logout,
-                    label: 'Kijelentkezés',
-                    color: Colors.red,
-                    onPressed: () => _showLogoutConfirmationDialog(context),
-                  ),
-                  const SizedBox(height: 15),
-                  _buildActionButton(
-                    icon: Icons.directions_car,
-                    label: 'Select Car',
-                    color: Colors.blue,
-                    onPressed: _showCarSelectionDialog,
                   ),
                 ],
               ),
-            ),
+            ],
           ),
         ),
         if (_isLoading) const LoadingOverlay(),
@@ -981,36 +938,369 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onPressed,
-  }) {
-    return Container(
-      width: double.infinity,
-      height: 60,
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+  Widget _buildProfileHeader() {
+    return Stack(
+      alignment: Alignment.center,
+      clipBehavior: Clip.none,
+      children: [
+        // Background card with gradient border
+        Container(
+          margin: const EdgeInsets.only(top: 60),
+          padding: const EdgeInsets.fromLTRB(16, 70, 16, 20),
+          decoration: BoxDecoration(
+            color: const Color(0xFF161616),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.red.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+            border: Border.all(
+              color: Colors.red.withOpacity(0.2),
+              width: 1,
+            ),
           ),
-          elevation: 5,
+          child: Column(
+            children: [
+              Text(
+                _nickname ?? 'No Nickname',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                widget.userEmail,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[400],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildEditButton(
+                    AppLocalizations.editNickname,
+                    Icons.edit,
+                    Colors.red,
+                    () {
+                      _nicknameController.text = _nickname ?? '';
+                      setState(() {});
+                      _showEditNicknameDialog();
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        // Positioned avatar with red glow
+        Positioned(
+          top: 0,
+          child: GestureDetector(
+            onTap: _updateProfileImage,
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.red.shade800,
+                    Colors.red.shade400,
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withOpacity(0.5),
+                    blurRadius: 15,
+                    spreadRadius: 2,
+                  )
+                ],
+              ),
+              child: CircleAvatar(
+                radius: 50,
+                backgroundColor: Colors.black,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(50),
+                  child: _profileImageUrl != null
+                      ? Image.memory(
+                          base64Decode(_profileImageUrl!),
+                          fit: BoxFit.cover,
+                          width: 100,
+                          height: 100,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                            Icons.person,
+                            size: 50,
+                            color: Colors.grey,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.person,
+                          size: 50,
+                          color: Colors.grey,
+                        ),
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Camera icon button
+        Positioned(
+          top: 5,
+          right: 0,
+          left: 70,
+          child: Container(
+            height: 36,
+            width: 36,
+            decoration: BoxDecoration(
+              color: Colors.red,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.red.withOpacity(0.3),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: const Icon(
+                Icons.camera_alt,
+                size: 18,
+                color: Colors.white,
+              ),
+              onPressed: _updateProfileImage,
+              padding: EdgeInsets.zero,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 20,
+          decoration: BoxDecoration(
+            color: Colors.red,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF161616),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          _buildInfoRow(
+            AppLocalizations.car,
+            _selectedCar ?? AppLocalizations.noCarSelected,
+            Icons.directions_car,
+            Colors.blue,
+            _showCarSelectionDialog,
+          ),
+          const Divider(height: 1, color: Color(0xFF333333)),
+          _buildInfoRow(
+            AppLocalizations.instagram,
+            _instagramUsername != null && _instagramUsername!.isNotEmpty
+                ? '@$_instagramUsername'
+                : AppLocalizations.noInstagramUsername,
+            Icons.photo_camera,
+            Colors.pink,
+            _showInstagramUsernameDialog,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(
+    String label,
+    String value,
+    IconData icon,
+    Color iconColor,
+    VoidCallback onPressed,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 12,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit, color: Colors.white54, size: 18),
+            onPressed: onPressed,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtonsGroup() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF161616),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          _buildActionRow(
+            AppLocalizations.changePassword,
+            Icons.lock_outline,
+            Colors.green,
+            () => _changePassword(context),
+          ),
+          const Divider(height: 1, color: Color(0xFF333333)),
+          _buildActionRow(
+            AppLocalizations.logOut,
+            Icons.logout,
+            Colors.red.shade400,
+            () => _showLogoutConfirmationDialog(context),
+          ),
+          const Divider(height: 1, color: Color(0xFF333333)),
+          _buildActionRow(
+            AppLocalizations.deleteAccount,
+            Icons.delete_outline,
+            Colors.red.shade900,
+            () => _showDeleteConfirmationDialog(context),
+            isDangerous: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionRow(
+    String label,
+    IconData icon,
+    Color iconColor,
+    VoidCallback onPressed, {
+    bool isDangerous = false,
+  }) {
+    return InkWell(
+      onTap: onPressed,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isDangerous ? Colors.red.shade400 : Colors.white,
+                  fontSize: 16,
+                  fontWeight: isDangerous ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: Colors.grey[600],
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEditButton(
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback onPressed,
+  ) {
+    return InkWell(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 1,
+          ),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: Colors.white),
-            const SizedBox(width: 10),
+            Icon(
+              icon,
+              color: color,
+              size: 14,
+            ),
+            const SizedBox(width: 4),
             Text(
               label,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -1024,5 +1314,241 @@ class _ProfilePageState extends State<ProfilePage> {
     if (mounted) {
       setState(fn);
     }
+  }
+
+  // Add method to show Instagram username dialog
+  void _showInstagramUsernameDialog() {
+    _instagramController.text = _instagramUsername ?? '';
+
+    // Track if validation error exists
+    bool hasError = false;
+    String errorMessage = '';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+          return AlertDialog(
+            backgroundColor: Colors.grey[900],
+            title: Row(
+              children: [
+                const Icon(Icons.photo_camera, color: Colors.pink),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    AppLocalizations.instagramUsername,
+                    style: const TextStyle(color: Colors.white),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.8,
+                  child: TextField(
+                    controller: _instagramController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.enterInstagramUsername,
+                      hintStyle: TextStyle(color: Colors.grey[400]),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(
+                            color: hasError ? Colors.red : Colors.white54),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(
+                            color: hasError ? Colors.red : Colors.pink),
+                      ),
+                      counterText: "${_instagramController.text.length}/30",
+                      counterStyle: TextStyle(
+                        color: _instagramController.text.length > 30
+                            ? Colors.red
+                            : Colors.grey,
+                      ),
+                      prefixText: '@',
+                      prefixStyle: const TextStyle(color: Colors.pink),
+                    ),
+                    maxLength: 30,
+                    onChanged: (value) {
+                      setState(() {
+                        // Clear error when user types
+                        hasError = false;
+                        errorMessage = '';
+
+                        // Check for invalid characters in real-time
+                        if (value.contains(' ')) {
+                          hasError = true;
+                          errorMessage = AppLocalizations.usernameNoSpaces;
+                        }
+
+                        // Check for special characters except underscore and period
+                        final invalidChars = RegExp(r'[^\w.]');
+                        if (invalidChars.hasMatch(value)) {
+                          hasError = true;
+                          errorMessage = AppLocalizations.usernameInvalidChars;
+                        }
+                      });
+                    },
+                  ),
+                ),
+                if (hasError)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0, left: 4.0),
+                    child: Text(
+                      errorMessage,
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0, left: 4.0),
+                  child: Text(
+                    AppLocalizations.instagramUsernameInfo,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  AppLocalizations.cancel,
+                  style: const TextStyle(color: Colors.white70),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final username = _instagramController.text.trim();
+
+                  // Validate before saving
+                  if (username.length > 30) {
+                    setState(() {
+                      hasError = true;
+                      errorMessage = AppLocalizations.usernameMaxLength;
+                    });
+                    return;
+                  }
+
+                  if (username.contains(' ')) {
+                    setState(() {
+                      hasError = true;
+                      errorMessage = AppLocalizations.usernameNoSpaces;
+                    });
+                    return;
+                  }
+
+                  // Check for special characters except underscore and period
+                  final invalidChars = RegExp(r'[^\w.]');
+                  if (invalidChars.hasMatch(username)) {
+                    setState(() {
+                      hasError = true;
+                      errorMessage = AppLocalizations.usernameInvalidChars;
+                    });
+                    return;
+                  }
+
+                  _updateInstagramUsername(username);
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.pink,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Text(AppLocalizations.save),
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+
+  // Add this new method to handle nickname editing with a dialog
+  void _showEditNicknameDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF161616),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.person, color: Colors.red, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              AppLocalizations.editNickname,
+              style: const TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
+        content: TextField(
+          controller: _nicknameController,
+          style: const TextStyle(color: Colors.white),
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: AppLocalizations.enterNickname,
+            hintStyle: TextStyle(color: Colors.grey[500]),
+            filled: true,
+            fillColor: const Color(0xFF212121),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            counterText: '${_nicknameController.text.length}/10',
+            counterStyle: TextStyle(
+              color: _nicknameController.text.length > 10
+                  ? Colors.red
+                  : Colors.grey,
+            ),
+          ),
+          maxLength: 10,
+          onChanged: (value) {
+            setState(() {});
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey,
+            ),
+            child: Text(AppLocalizations.cancel.toUpperCase()),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              _submitNickname(_nicknameController.text);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(AppLocalizations.save.toUpperCase()),
+          ),
+        ],
+      ),
+    );
   }
 }

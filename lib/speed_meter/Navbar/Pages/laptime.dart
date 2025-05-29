@@ -1,10 +1,11 @@
 // ignore_for_file: deprecated_member_use
 
 import 'dart:async';
-import 'dart:math';
+import 'dart:math' show min, max, sqrt, cos, pi;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/services.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 
 // LatLng osztály hozzáadása, amely nincs a kapott kódban
 class LatLng {
@@ -31,8 +32,7 @@ class _LapTimeScreenState extends State<LapTimeScreen>
   bool _trackCompleted = false; // Pálya rögzítése befejezve
   StreamSubscription<Position>? _positionStreamSubscription;
   final int _minPointsForCompletion = 30; // Minimális pontszám a befejezéshez
-  final double _completionDistanceThreshold =
-      15.0; // Befejezési távolság a startponttól (méterben)
+// Befejezési távolság a startponttól (méterben)
   final Duration _minRecordingTime =
       Duration(seconds: 10); // Minimális rögzítési idő
   DateTime? _recordingStartTime;
@@ -55,6 +55,16 @@ class _LapTimeScreenState extends State<LapTimeScreen>
   final Color _textWhite = Color(0xFFF5F5F5);
   final Color _highlightYellow = Color(0xFFFFD23F);
 
+  // Define the start/finish line as a vector
+  LatLng? _startLinePoint1;
+  LatLng? _startLinePoint2;
+
+  // Add these fields
+  StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
+  StreamSubscription<GyroscopeEvent>? _gyroscopeSubscription;
+  StreamSubscription<MagnetometerEvent>? _magnetometerSubscription;
+  bool _isGpsAccurate = false;
+
   @override
   void initState() {
     super.initState();
@@ -75,12 +85,21 @@ class _LapTimeScreenState extends State<LapTimeScreen>
 
     // Kérjük a helymeghatározás jogosultságokat
     _requestLocationPermission();
+
+    // Initialize sensors
+    _initSensors();
   }
 
   @override
   void dispose() {
     _positionStreamSubscription?.cancel();
     _pulseAnimationController.dispose();
+
+    // Cancel sensor subscriptions
+    _accelerometerSubscription?.cancel();
+    _gyroscopeSubscription?.cancel();
+    _magnetometerSubscription?.cancel();
+
     super.dispose();
   }
 
@@ -146,7 +165,6 @@ class _LapTimeScreenState extends State<LapTimeScreen>
   }
 
   void _startPositionTracking() {
-    // Elindítjuk a pozíció követését akkor is, ha nem rögzítünk
     _positionStreamSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.bestForNavigation,
@@ -155,27 +173,49 @@ class _LapTimeScreenState extends State<LapTimeScreen>
     ).listen((Position position) {
       if (!mounted) return;
 
+      // Check position accuracy
+      bool isAccurate =
+          position.accuracy < 10.0; // 10 meters accuracy threshold
+      setState(() {
+        _isGpsAccurate = isAccurate;
+      });
+
       LatLng newPosition = LatLng(position.latitude, position.longitude);
+
+      // Apply simple Kalman filtering if GPS is inaccurate
+      if (!isAccurate && _currentPosition != null) {
+        // Simple position smoothing - weight between last known position and new position
+        newPosition = LatLng(
+            _currentPosition!.latitude * 0.7 + newPosition.latitude * 0.3,
+            _currentPosition!.longitude * 0.7 + newPosition.longitude * 0.3);
+      }
+
+      // Store previous position for line crossing detection
+      LatLng? prevPosition = _currentPosition;
 
       setState(() {
         _currentPosition = newPosition;
 
-        // Ha rögzítés alatt állunk, hozzáadjuk a pontot a pályához
+        // If recording, add the point to the track
         if (_isRecording) {
           _trackPoints.add(newPosition);
 
-          // Ellenőrizzük, hogy befejezhető-e a pálya (elég pont és idő, közel a starthoz)
-          if (_startPoint != null &&
-              _canComplete &&
+          // Check if the track can be completed
+          if (_canComplete &&
               _trackPoints.length > _minPointsForCompletion &&
-              _isCloseToStart(newPosition)) {
+              _startLinePoint1 != null &&
+              _startLinePoint2 != null &&
+              prevPosition != null &&
+              _hasLineCrossing(prevPosition, newPosition)) {
             _completeTrackRecording();
           }
         }
-        // Ha a pálya már rögzítve van, ellenőrizzük, hogy áthaladtunk-e a rajtvonalon
+        // For lap timing when track is already recorded
         else if (_trackCompleted &&
-            _startPoint != null &&
-            _isCloseToStart(newPosition)) {
+            _startLinePoint1 != null &&
+            _startLinePoint2 != null &&
+            prevPosition != null &&
+            _hasLineCrossing(prevPosition, newPosition)) {
           _onLapCompleted();
         }
       });
@@ -194,6 +234,7 @@ class _LapTimeScreenState extends State<LapTimeScreen>
       return;
     }
 
+    // Set the initial position as the start point
     setState(() {
       _startPoint = _currentPosition;
       _trackPoints.clear();
@@ -205,6 +246,26 @@ class _LapTimeScreenState extends State<LapTimeScreen>
       _currentLapStartTime = DateTime.now();
       _lapTimes.clear();
       _lapCount = 0;
+    });
+
+    // Wait for a few points to determine direction and set up finish line
+    Future.delayed(Duration(seconds: 3), () {
+      if (_trackPoints.length > 10) {
+        // Determine initial direction from first few points
+        LatLng initialDirection =
+            _calculateDirection(_trackPoints.sublist(0, 10));
+
+        // Create a perpendicular line segment for the start/finish line
+        // This makes a line perpendicular to the track's direction
+        _startLinePoint1 =
+            _createOffsetPoint(_startPoint!, initialDirection, 10, true);
+        _startLinePoint2 =
+            _createOffsetPoint(_startPoint!, initialDirection, 10, false);
+      } else {
+        // Fallback if not enough points
+        _startLinePoint1 = _startPoint;
+        _startLinePoint2 = _startPoint;
+      }
     });
 
     // Engedélyezzük a befejezést a minimális idő után
@@ -347,18 +408,6 @@ class _LapTimeScreenState extends State<LapTimeScreen>
     );
   }
 
-  bool _isCloseToStart(LatLng point) {
-    if (_startPoint == null) return false;
-
-    double distance = Geolocator.distanceBetween(
-      point.latitude,
-      point.longitude,
-      _startPoint!.latitude,
-      _startPoint!.longitude,
-    );
-
-    return distance < _completionDistanceThreshold;
-  }
 
   String _getStatusText() {
     if (_trackCompleted) {
@@ -454,6 +503,28 @@ class _LapTimeScreenState extends State<LapTimeScreen>
         ),
       ),
     );
+  }
+
+  void _initSensors() {
+    // Listen to accelerometer
+    _accelerometerSubscription =
+        accelerometerEvents.listen((AccelerometerEvent event) {
+      setState(() {
+      });
+    });
+
+    // Listen to gyroscope
+    _gyroscopeSubscription = gyroscopeEvents.listen((GyroscopeEvent event) {
+      setState(() {
+      });
+    });
+
+    // Listen to magnetometer
+    _magnetometerSubscription =
+        magnetometerEvents.listen((MagnetometerEvent event) {
+      setState(() {
+      });
+    });
   }
 
   @override
@@ -601,10 +672,13 @@ class _LapTimeScreenState extends State<LapTimeScreen>
                         trackPoints: _trackPoints,
                         currentPosition: _currentPosition,
                         startPoint: _startPoint,
+                        startLinePoint1: _startLinePoint1,
+                        startLinePoint2: _startLinePoint2,
                         trackColor: _primaryRed,
                         positionColor: _highlightYellow,
                         gridColor: _accentGrey.withOpacity(0.2),
                         trackCompleted: _trackCompleted,
+                        isGpsAccurate: _isGpsAccurate,
                       ),
                       size: Size.infinite,
                     ),
@@ -1114,6 +1188,72 @@ class _LapTimeScreenState extends State<LapTimeScreen>
   }
 }
 
+// Calculate direction from a list of points
+LatLng _calculateDirection(List<LatLng> points) {
+  if (points.length < 2) return points.first;
+
+  return LatLng(points.last.latitude - points.first.latitude,
+      points.last.longitude - points.first.longitude);
+}
+
+// Create points perpendicular to direction of travel
+LatLng _createOffsetPoint(
+    LatLng center, LatLng direction, double meters, bool isLeft) {
+  // Calculate perpendicular vector
+  double dx = direction.longitude - center.longitude;
+  double dy = direction.latitude - center.latitude;
+
+  // Normalize and rotate 90 degrees
+  double length = sqrt(dx * dx + dy * dy);
+  dx = dx / length;
+  dy = dy / length;
+
+  double perpDx = isLeft ? -dy : dy;
+  double perpDy = isLeft ? dx : -dx;
+
+  // Convert meters to appropriate coordinate units (approximate)
+  double metersToDegreesLat = 1.0 / 111111.0; // 1 meter in degrees latitude
+  double metersToDegreesLng = 1.0 /
+      (111111.0 *
+          cos(center.latitude * (pi / 180.0))); // 1 meter in degrees longitude
+
+  return LatLng(center.latitude + (perpDy * meters * metersToDegreesLat),
+      center.longitude + (perpDx * meters * metersToDegreesLng));
+}
+
+// Line crossing detection
+bool _hasLineCrossing(LatLng prevPosition, LatLng currentPosition) {
+  return _doLineSegmentsIntersect(
+      prevPosition, currentPosition, _startLinePoint1 as LatLng, _startLinePoint2 as LatLng);
+}
+
+// ignore: camel_case_types
+class _startLinePoint2 {
+}
+
+// ignore: camel_case_types
+class _startLinePoint1 {
+}
+
+// Line intersection algorithm
+bool _doLineSegmentsIntersect(LatLng a, LatLng b, LatLng c, LatLng d) {
+  // Convert to simpler variable names for the algorithm
+  double x1 = a.longitude, y1 = a.latitude;
+  double x2 = b.longitude, y2 = b.latitude;
+  double x3 = c.longitude, y3 = c.latitude;
+  double x4 = d.longitude, y4 = d.latitude;
+
+  // Calculate determinants
+  double det = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+  if (det.abs() < 1e-10) return false; // Lines are parallel
+
+  double t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / det;
+  double u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / det;
+
+  // Check if intersection is within both line segments
+  return (t >= 0 && t <= 1 && u >= 0 && u <= 1);
+}
+
 // This class draws the track, current position, and start point
 class ModernTrackPainter extends CustomPainter {
   final List<LatLng> trackPoints;
@@ -1123,15 +1263,21 @@ class ModernTrackPainter extends CustomPainter {
   final Color positionColor;
   final Color gridColor;
   final bool trackCompleted;
+  final LatLng? startLinePoint1;
+  final LatLng? startLinePoint2;
+  final bool isGpsAccurate;
 
   ModernTrackPainter({
     required this.trackPoints,
     this.currentPosition,
     this.startPoint,
+    this.startLinePoint1,
+    this.startLinePoint2,
     required this.trackColor,
     required this.positionColor,
     required this.gridColor,
     required this.trackCompleted,
+    this.isGpsAccurate = true,
   });
 
   @override
@@ -1227,6 +1373,30 @@ class ModernTrackPainter extends CustomPainter {
       canvas.drawCircle(Offset(x, y), 6, Paint()..color = Colors.white);
     }
 
+    // Draw start/finish line
+    if (startLinePoint1 != null && startLinePoint2 != null) {
+      double x1 = (startLinePoint1!.longitude - minLng) /
+          (maxLng - minLng) *
+          size.width;
+      double y1 = (maxLat - startLinePoint1!.latitude) /
+          (maxLat - minLat) *
+          size.height;
+
+      double x2 = (startLinePoint2!.longitude - minLng) /
+          (maxLng - minLng) *
+          size.width;
+      double y2 = (maxLat - startLinePoint2!.latitude) /
+          (maxLat - minLat) *
+          size.height;
+
+      final linePaint = Paint()
+        ..color = trackCompleted ? const Color(0xFFFFD23F) : trackColor
+        ..strokeWidth = 4
+        ..strokeCap = StrokeCap.round;
+
+      canvas.drawLine(Offset(x1, y1), Offset(x2, y2), linePaint);
+    }
+
     // Draw current position
     if (currentPosition != null) {
       double x = (currentPosition!.longitude - minLng) /
@@ -1251,6 +1421,17 @@ class ModernTrackPainter extends CustomPainter {
             ..color = Colors.white
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2);
+
+      // Add accuracy indicator
+      if (!isGpsAccurate) {
+        canvas.drawCircle(
+            Offset(x, y),
+            25,
+            Paint()
+              ..color = Colors.red.withOpacity(0.2)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2);
+      }
     }
   }
 
@@ -1300,3 +1481,5 @@ class ModernTrackPainter extends CustomPainter {
         oldDelegate.trackCompleted != trackCompleted;
   }
 }
+
+// Store previous position for line crossing detection

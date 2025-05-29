@@ -603,4 +603,38 @@ class AuthService {
       return [];
     }
   }
+
+// This would go in your AuthService class
+Future<String?> getInstagramUsername() async {
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    return doc.data()?['instagramUsername'] as String?;
+  } catch (e) {
+    // ignore: avoid_print
+    print('Error getting Instagram username: $e');
+    return null;
+  }
+}
+
+Future<void> updateInstagramUsername(String username) async {
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw 'User not logged in';
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .update({'instagramUsername': username});
+  } catch (e) {
+    throw 'Failed to update Instagram username: $e';
+  }
+}
+
 }

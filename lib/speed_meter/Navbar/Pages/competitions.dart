@@ -735,6 +735,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
     );
   }
 
+  // Update the user details dialog to include Instagram username
   void _showUserDetailsDialog(Map<String, dynamic> item) async {
     // Get the user ID associated with this leaderboard item
     String? userId = item['userId'];
@@ -799,19 +800,11 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
 
       final userData = userDoc.data()!;
 
-      // Get the profile image as a base64 string - use the correct field name
-      final profileImageBase64 = userData[
-          'profileImage']; // Changed from 'profileImageUrl' to 'profileImage'
+      // Get the profile image as a base64 string
+      final profileImageBase64 = userData['profileImage'];
 
-      // Debug check for profile image
-      if (profileImageBase64 != null) {
-        // ignore: avoid_print
-        print(
-            'Found profile image, length: ${profileImageBase64.toString().length}');
-      } else {
-        // ignore: avoid_print
-        print('No profile image found for user');
-      }
+      // Get the Instagram username
+      final instagramUsername = userData['instagramUsername'];
 
       // Show the actual user details dialog
       showDialog(
@@ -847,8 +840,6 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                                 height: 100,
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) {
-                                  // ignore: avoid_print
-                                  print('Error loading profile image: $error');
                                   return Icon(Icons.person,
                                       size: 50, color: _textWhite);
                                 },
@@ -884,6 +875,29 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                       fontSize: 20,
                     ),
                   ),
+
+                  // Instagram username if available
+                  if (instagramUsername != null && instagramUsername.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.photo_camera,
+                              color: Colors.pink, size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            '@$instagramUsername',
+                            style: TextStyle(
+                              color: Colors.pink,
+                              fontSize: 14,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+
                   SizedBox(height: 8),
 
                   // Car

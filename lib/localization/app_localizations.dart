@@ -296,16 +296,7 @@ class AppLocalizations {
     }
   }
 
-  // Cancel button
-  static String get cancel {
-    if (_languageProvider.isHungarian) {
-      return "Mégse";
-    } else if (_languageProvider.isGerman) {
-      return "Abbrechen";
-    } else {
-      return "Cancel";
-    }
-  }
+
 
   // Test speed increase
   static String get testSpeedIncrease {
@@ -770,6 +761,429 @@ class AppLocalizations {
       return "Konto registrieren";
     } else {
       return "Register Account";
+    }
+  }
+
+  // Profile page section headers
+  static String get accountInformation {
+    if (_languageProvider.isHungarian) {
+      return "Felhasználói adatok";
+    } else if (_languageProvider.isGerman) {
+      return "Kontoinformationen";
+    } else {
+      return "Account Information";
+    }
+  }
+
+  static String get accountSettings {
+    if (_languageProvider.isHungarian) {
+      return "Fiók beállítások";
+    } else if (_languageProvider.isGerman) {
+      return "Kontoeinstellungen";
+    } else {
+      return "Account Settings";
+    }
+  }
+
+  // Profile page info rows
+  static String get car {
+    if (_languageProvider.isHungarian) {
+      return "Autó";
+    } else if (_languageProvider.isGerman) {
+      return "Auto";
+    } else {
+      return "Car";
+    }
+  }
+
+  static String get noCarSelected {
+    if (_languageProvider.isHungarian) {
+      return "Nincs autó kiválasztva";
+    } else if (_languageProvider.isGerman) {
+      return "Kein Auto ausgewählt";
+    } else {
+      return "No car selected";
+    }
+  }
+
+  static String get instagram {
+    if (_languageProvider.isHungarian) {
+      return "Instagram";
+    } else if (_languageProvider.isGerman) {
+      return "Instagram";
+    } else {
+      return "Instagram";
+    }
+  }
+
+  static String get noInstagramUsername {
+    if (_languageProvider.isHungarian) {
+      return "Nincs Instagram felhasználónév";
+    } else if (_languageProvider.isGerman) {
+      return "Kein Instagram-Benutzername";
+    } else {
+      return "No Instagram username";
+    }
+  }
+
+  // Profile page action rows
+  static String get changePassword {
+    if (_languageProvider.isHungarian) {
+      return "Jelszó módosítása";
+    } else if (_languageProvider.isGerman) {
+      return "Passwort ändern";
+    } else {
+      return "Change Password";
+    }
+  }
+
+  static String get logOut {
+    if (_languageProvider.isHungarian) {
+      return "Kijelentkezés";
+    } else if (_languageProvider.isGerman) {
+      return "Abmelden";
+    } else {
+      return "Log Out";
+    }
+  }
+
+  static String get deleteAccount {
+    if (_languageProvider.isHungarian) {
+      return "Fiók törlése";
+    } else if (_languageProvider.isGerman) {
+      return "Konto löschen";
+    } else {
+      return "Delete Account";
+    }
+  }
+
+  // Car dialog
+  static String get selectCar {
+    if (_languageProvider.isHungarian) {
+      return "Autó kiválasztása";
+    } else if (_languageProvider.isGerman) {
+      return "Auto auswählen";
+    } else {
+      return "Select Car";
+    }
+  }
+
+  static String get enterCarModel {
+    if (_languageProvider.isHungarian) {
+      return "Add meg az autó típusát";
+    } else if (_languageProvider.isGerman) {
+      return "Automodell eingeben";
+    } else {
+      return "Enter car model";
+    }
+  }
+
+  static String get carExamples {
+    if (_languageProvider.isHungarian) {
+      return "Például: BMW M3, Audi RS6, Tesla Model 3";
+    } else if (_languageProvider.isGerman) {
+      return "Beispiel: BMW M3, Audi RS6, Tesla Model 3";
+    } else {
+      return "Example: BMW M3, Audi RS6, Tesla Model 3";
+    }
+  }
+
+  // Instagram dialog
+  static String get instagramUsername {
+    if (_languageProvider.isHungarian) {
+      return "Instagram felhasználónév";
+    } else if (_languageProvider.isGerman) {
+      return "Instagram-Benutzername";
+    } else {
+      return "Instagram Username";
+    }
+  }
+
+  static String get enterInstagramUsername {
+    if (_languageProvider.isHungarian) {
+      return "Add meg az Instagram felhasználónevedet";
+    } else if (_languageProvider.isGerman) {
+      return "Geben Sie Ihren Instagram-Benutzernamen ein";
+    } else {
+      return "Enter your Instagram username";
+    }
+  }
+
+  static String get instagramUsernameInfo {
+    if (_languageProvider.isHungarian) {
+      return "Add meg az Instagram felhasználónevedet @ jel nélkül";
+    } else if (_languageProvider.isGerman) {
+      return "Geben Sie Ihren Instagram-Benutzernamen ohne das @-Symbol ein";
+    } else {
+      return "Enter your Instagram username without the @ symbol";
+    }
+  }
+
+  // Common dialog buttons
+  static String get save {
+    if (_languageProvider.isHungarian) {
+      return "Mentés";
+    } else if (_languageProvider.isGerman) {
+      return "Speichern";
+    } else {
+      return "Save";
+    }
+  }
+
+  static String get cancel {
+    if (_languageProvider.isHungarian) {
+      return "Mégse";
+    } else if (_languageProvider.isGerman) {
+      return "Abbrechen";
+    } else {
+      return "Cancel";
+    }
+  }
+
+  // Edit nickname
+  static String get editNickname {
+    if (_languageProvider.isHungarian) {
+      return "Becenév szerkesztése";
+    } else if (_languageProvider.isGerman) {
+      return "Spitznamen bearbeiten";
+    } else {
+      return "Edit Nickname";
+    }
+  }
+
+  static String get enterNickname {
+    if (_languageProvider.isHungarian) {
+      return "Add meg a becenevedet (max. 10 karakter)";
+    } else if (_languageProvider.isGerman) {
+      return "Geben Sie Ihren Spitznamen ein (max. 10 Zeichen)";
+    } else {
+      return "Enter nickname (max 10 chars)";
+    }
+  }
+
+  // Validation errors
+  static String get usernameNoSpaces {
+    if (_languageProvider.isHungarian) {
+      return "A felhasználónév nem tartalmazhat szóközt";
+    } else if (_languageProvider.isGerman) {
+      return "Benutzername darf keine Leerzeichen enthalten";
+    } else {
+      return "Spaces are not allowed in Instagram usernames";
+    }
+  }
+
+  static String get usernameInvalidChars {
+    if (_languageProvider.isHungarian) {
+      return "Csak betűk, számok, aláhúzás és pont engedélyezett";
+    } else if (_languageProvider.isGerman) {
+      return "Nur Buchstaben, Zahlen, Unterstriche und Punkte sind erlaubt";
+    } else {
+      return "Only letters, numbers, underscore and periods allowed";
+    }
+  }
+
+  static String get usernameMaxLength {
+    if (_languageProvider.isHungarian) {
+      return "A felhasználónév nem lehet hosszabb 30 karakternél";
+    } else if (_languageProvider.isGerman) {
+      return "Benutzername darf 30 Zeichen nicht überschreiten";
+    } else {
+      return "Username cannot exceed 30 characters";
+    }
+  }
+
+  static String get carModelEmpty {
+    if (_languageProvider.isHungarian) {
+      return "Az autó típusa nem lehet üres";
+    } else if (_languageProvider.isGerman) {
+      return "Automodell darf nicht leer sein";
+    } else {
+      return "Car model cannot be empty";
+    }
+  }
+
+  static String get carModelTooShort {
+    if (_languageProvider.isHungarian) {
+      return "Az autó típusa túl rövid";
+    } else if (_languageProvider.isGerman) {
+      return "Automodell ist zu kurz";
+    } else {
+      return "Car model is too short";
+    }
+  }
+
+  static String get carModelTooLong {
+    if (_languageProvider.isHungarian) {
+      return "Az autó típusa nem lehet hosszabb 25 karakternél";
+    } else if (_languageProvider.isGerman) {
+      return "Automodell darf 25 Zeichen nicht überschreiten";
+    } else {
+      return "Car model cannot exceed 25 characters";
+    }
+  }
+
+  // Password change dialog
+  static String get currentPassword {
+    if (_languageProvider.isHungarian) {
+      return "Jelenlegi jelszó";
+    } else if (_languageProvider.isGerman) {
+      return "Aktuelles Passwort";
+    } else {
+      return "Current password";
+    }
+  }
+
+  static String get newPassword {
+    if (_languageProvider.isHungarian) {
+      return "Új jelszó";
+    } else if (_languageProvider.isGerman) {
+      return "Neues Passwort";
+    } else {
+      return "New password";
+    }
+  }
+
+  static String get confirmNewPassword {
+    if (_languageProvider.isHungarian) {
+      return "Új jelszó megerősítése";
+    } else if (_languageProvider.isGerman) {
+      return "Neues Passwort bestätigen";
+    } else {
+      return "Confirm new password";
+    }
+  }
+
+  static String get allFieldsRequired {
+    if (_languageProvider.isHungarian) {
+      return "Minden mező kitöltése kötelező!";
+    } else if (_languageProvider.isGerman) {
+      return "Alle Felder sind erforderlich!";
+    } else {
+      return "All fields are required!";
+    }
+  }
+
+  static String get passwordsDoNotMatch {
+    if (_languageProvider.isHungarian) {
+      return "Az új jelszavak nem egyeznek!";
+    } else if (_languageProvider.isGerman) {
+      return "Die neuen Passwörter stimmen nicht überein!";
+    } else {
+      return "The new passwords don't match!";
+    }
+  }
+
+  static String get passwordCannotBeSame {
+    if (_languageProvider.isHungarian) {
+      return "Az új jelszó nem lehet ugyanaz, mint a jelenlegi!";
+    } else if (_languageProvider.isGerman) {
+      return "Das neue Passwort darf nicht mit dem aktuellen identisch sein!";
+    } else {
+      return "The new password cannot be the same as the current one!";
+    }
+  }
+
+  static String get currentPasswordIncorrect {
+    if (_languageProvider.isHungarian) {
+      return "A jelenlegi jelszó helytelen!";
+    } else if (_languageProvider.isGerman) {
+      return "Das aktuelle Passwort ist falsch!";
+    } else {
+      return "Current password is incorrect!";
+    }
+  }
+
+  static String get passwordChangedSuccessfully {
+    if (_languageProvider.isHungarian) {
+      return "Jelszó sikeresen módosítva!";
+    } else if (_languageProvider.isGerman) {
+      return "Passwort erfolgreich geändert!";
+    } else {
+      return "Password changed successfully!";
+    }
+  }
+
+  // Logout dialog
+  static String get logoutConfirmation {
+    if (_languageProvider.isHungarian) {
+      return "Biztosan ki szeretnél jelentkezni?";
+    } else if (_languageProvider.isGerman) {
+      return "Möchten Sie sich wirklich abmelden?";
+    } else {
+      return "Are you sure you want to log out?";
+    }
+  }
+
+  // Delete account dialog
+  static String get deleteAccountConfirmation {
+    if (_languageProvider.isHungarian) {
+      return "Biztosan törölni szeretnéd a fiókodat?\nEz a művelet nem visszavonható!";
+    } else if (_languageProvider.isGerman) {
+      return "Sind Sie sicher, dass Sie Ihr Konto löschen möchten?\nDiese Aktion kann nicht rückgängig gemacht werden!";
+    } else {
+      return "Are you sure you want to delete your account?\nThis action cannot be undone!";
+    }
+  }
+
+  // Success messages
+  static String get nicknameUpdated {
+    if (_languageProvider.isHungarian) {
+      return "Becenév sikeresen módosítva!";
+    } else if (_languageProvider.isGerman) {
+      return "Spitzname erfolgreich aktualisiert!";
+    } else {
+      return "Nickname successfully updated!";
+    }
+  }
+
+  static String get profilePictureUpdated {
+    if (_languageProvider.isHungarian) {
+      return "Profilkép sikeresen módosítva!";
+    } else if (_languageProvider.isGerman) {
+      return "Profilbild erfolgreich aktualisiert!";
+    } else {
+      return "Profile picture successfully updated!";
+    }
+  }
+
+  static String get carUpdated {
+    if (_languageProvider.isHungarian) {
+      return "Autó sikeresen módosítva!";
+    } else if (_languageProvider.isGerman) {
+      return "Auto erfolgreich aktualisiert!";
+    } else {
+      return "Car successfully updated!";
+    }
+  }
+
+  static String get instagramUpdated {
+    if (_languageProvider.isHungarian) {
+      return "Instagram felhasználónév sikeresen módosítva!";
+    } else if (_languageProvider.isGerman) {
+      return "Instagram-Benutzername erfolgreich aktualisiert!";
+    } else {
+      return "Instagram username successfully updated!";
+    }
+  }
+
+  // Error messages
+  static String get emptyNickname {
+    if (_languageProvider.isHungarian) {
+      return "A becenév nem lehet üres!";
+    } else if (_languageProvider.isGerman) {
+      return "Der Spitzname darf nicht leer sein!";
+    } else {
+      return "Nickname cannot be empty!";
+    }
+  }
+
+  static String get nicknameTooLong {
+    if (_languageProvider.isHungarian) {
+      return "A becenév maximum 10 karakter lehet!";
+    } else if (_languageProvider.isGerman) {
+      return "Der Spitzname darf maximal 10 Zeichen lang sein!";
+    } else {
+      return "Nickname cannot exceed 10 characters!";
     }
   }
 }

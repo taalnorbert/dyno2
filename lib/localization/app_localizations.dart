@@ -296,8 +296,6 @@ class AppLocalizations {
     }
   }
 
-
-
   // Test speed increase
   static String get testSpeedIncrease {
     if (_languageProvider.isHungarian) {
@@ -1184,6 +1182,82 @@ class AppLocalizations {
       return "Der Spitzname darf maximal 10 Zeichen lang sein!";
     } else {
       return "Nickname cannot exceed 10 characters!";
+    }
+  }
+
+  // Google bejelentkezés gombhoz
+  static String get signInWithGoogle {
+    if (_languageProvider.isHungarian) {
+      return "Google bejelentkezés";
+    } else if (_languageProvider.isGerman) {
+      return "Mit Google anmelden";
+    } else {
+      return "Sign in with Google";
+    }
+  }
+
+  // "vagy" szöveghez
+  static String get or {
+    if (_languageProvider.isHungarian) {
+      return "vagy";
+    } else if (_languageProvider.isGerman) {
+      return "oder";
+    } else {
+      return "or";
+    }
+  }
+
+  // Google bejelentkezési hiba üzenethez
+  static String get googleSignInError {
+    if (_languageProvider.isHungarian) {
+      return "Google bejelentkezési hiba";
+    } else if (_languageProvider.isGerman) {
+      return "Google-Anmeldungsfehler";
+    } else {
+      return "Google sign-in error";
+    }
+  }
+
+  // Google bejelentkezés megszakítva üzenethez
+  static String get googleSignInCanceled {
+    if (_languageProvider.isHungarian) {
+      return "Google bejelentkezés megszakítva";
+    } else if (_languageProvider.isGerman) {
+      return "Google-Anmeldung abgebrochen";
+    } else {
+      return "Google sign-in canceled";
+    }
+  }
+
+  // Művelet időtúllépés üzenethez
+  static String get operationTimedOut {
+    if (_languageProvider.isHungarian) {
+      return "A művelet túl sok időt vett igénybe";
+    } else if (_languageProvider.isGerman) {
+      return "Der Vorgang hat zu viel Zeit in Anspruch genommen";
+    } else {
+      return "The operation timed out";
+    }
+  }
+
+  // Regisztráció sikertelen üzenethez
+  static String get registrationFailed {
+    if (_languageProvider.isHungarian) {
+      return "Regisztráció sikertelen";
+    } else if (_languageProvider.isGerman) {
+      return "Registrierung fehlgeschlagen";
+    } else {
+      return "Registration failed";
+    }
+  }
+
+  static String get error {
+    if (_languageProvider.isHungarian) {
+      return "Hiba";
+    } else if (_languageProvider.isGerman) {
+      return "Fehler";
+    } else {
+      return "Error";
     }
   }
 }

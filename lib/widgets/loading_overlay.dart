@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:go_router/go_router.dart';
-
+import '../localization/app_localizations.dart';
 class LoadingOverlay extends StatefulWidget {
   final Duration timeout;
   final VoidCallback? onTimeout;
@@ -93,7 +93,8 @@ class _LoadingOverlayState extends State<LoadingOverlay> {
                           backgroundColor: Colors.red,
                           foregroundColor: Colors.white,
                         ),
-                        child: Text('Visszatérés'),
+                        // Helyettesítsük AppLocalizations.back-kel:
+                        child: Text(AppLocalizations.back),
                       ),
                     ],
                   )

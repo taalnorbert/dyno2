@@ -481,13 +481,14 @@ class _ProfilePageState extends State<ProfilePage> {
               canPop: !isLoading,
               child: AlertDialog(
                 backgroundColor: Colors.grey[900],
-                title: const Row(
+                title: Row(
                   children: [
-                    Icon(Icons.lock, color: Colors.green),
-                    SizedBox(width: 10),
+                    const Icon(Icons.lock, color: Colors.green),
+                    const SizedBox(width: 10),
                     Text(
-                      'Jelszó módosítás',
-                      style: TextStyle(
+                      // "Jelszó módosítás" helyett:
+                      AppLocalizations.changePassword,
+                      style: const TextStyle(
                           color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -507,7 +508,8 @@ class _ProfilePageState extends State<ProfilePage> {
                               enabled: !isLoading,
                               style: const TextStyle(color: Colors.white),
                               decoration: InputDecoration(
-                                labelText: 'Jelenlegi jelszó',
+                                // "Jelenlegi jelszó" helyett:
+                                labelText: AppLocalizations.currentPassword,
                                 labelStyle:
                                     const TextStyle(color: Colors.white70),
                                 enabledBorder: OutlineInputBorder(
@@ -529,7 +531,8 @@ class _ProfilePageState extends State<ProfilePage> {
                               enabled: !isLoading,
                               style: const TextStyle(color: Colors.white),
                               decoration: InputDecoration(
-                                labelText: 'Új jelszó',
+                                // "Új jelszó" helyett:
+                                labelText: AppLocalizations.newPassword,
                                 labelStyle:
                                     const TextStyle(color: Colors.white70),
                                 enabledBorder: OutlineInputBorder(
@@ -551,7 +554,8 @@ class _ProfilePageState extends State<ProfilePage> {
                               enabled: !isLoading,
                               style: const TextStyle(color: Colors.white),
                               decoration: InputDecoration(
-                                labelText: 'Új jelszó megerősítése',
+                                // "Új jelszó megerősítése" helyett:
+                                labelText: AppLocalizations.confirmNewPassword,
                                 labelStyle:
                                     const TextStyle(color: Colors.white70),
                                 enabledBorder: OutlineInputBorder(
@@ -601,9 +605,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                 newPassword.isEmpty ||
                                 confirmPassword.isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
+                                SnackBar(
+                                  // "Minden mező kitöltése kötelező!" helyett:
                                   content:
-                                      Text('Minden mező kitöltése kötelező!'),
+                                      Text(AppLocalizations.allFieldsRequired),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -612,9 +617,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
                             if (newPassword != confirmPassword) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content:
-                                      Text('Az új jelszavak nem egyeznek!'),
+                                SnackBar(
+                                  // "Az új jelszavak nem egyeznek!" helyett:
+                                  content: Text(
+                                      AppLocalizations.passwordsDoNotMatch),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -623,10 +629,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
                             if (currentPassword == newPassword) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
+                                SnackBar(
+                                  // "Az új jelszó nem lehet ugyanaz, mint a jelenlegi!" helyett:
                                   content: Text(
-                                    'Az új jelszó nem lehet ugyanaz, mint a jelenlegi!',
-                                  ),
+                                      AppLocalizations.passwordCannotBeSame),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -645,9 +651,10 @@ class _ProfilePageState extends State<ProfilePage> {
                               if (!isCurrentPasswordValid) {
                                 if (!mounted || !isDialogActive) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content:
-                                        Text('A jelenlegi jelszó helytelen!'),
+                                  SnackBar(
+                                    // "A jelenlegi jelszó helytelen!" helyett:
+                                    content: Text(AppLocalizations
+                                        .currentPasswordIncorrect),
                                     backgroundColor: Colors.red,
                                   ),
                                 );
@@ -666,8 +673,10 @@ class _ProfilePageState extends State<ProfilePage> {
                               Navigator.of(dialogContext).pop();
 
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Jelszó sikeresen módosítva!'),
+                                SnackBar(
+                                  // "Jelszó sikeresen módosítva!" helyett:
+                                  content: Text(AppLocalizations
+                                      .passwordChangedSuccessfully),
                                   backgroundColor: Colors.green,
                                 ),
                               );
@@ -680,8 +689,8 @@ class _ProfilePageState extends State<ProfilePage> {
                               if (!mounted || !isDialogActive) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content:
-                                      Text('Hiba történt: ${e.toString()}'),
+                                  content: Text(
+                                      '${AppLocalizations.error}: ${e.toString()}'),
                                   backgroundColor: Colors.red,
                                 ),
                               );

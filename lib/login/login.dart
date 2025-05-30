@@ -97,7 +97,7 @@ class _LoginState extends State<Login> {
             ),
             const SizedBox(width: 12),
             Text(
-              "Google bejelentkezés",
+              AppLocalizations.signInWithGoogle,
               style: GoogleFonts.raleway(
                 textStyle: const TextStyle(
                   fontWeight: FontWeight.bold,
@@ -126,7 +126,7 @@ class _LoginState extends State<Login> {
         if (mounted) {
           setState(() {
             _isLoading = false;
-            _showWarning('Google bejelentkezés megszakítva.');
+            _showWarning(AppLocalizations.googleSignInCanceled);
           });
         }
         return;
@@ -147,7 +147,7 @@ class _LoginState extends State<Login> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _showWarning('Google bejelentkezési hiba: ${e.toString()}');
+          _showWarning('${AppLocalizations.googleSignInError}: ${e.toString()}');
         });
       }
     }
@@ -221,7 +221,7 @@ class _LoginState extends State<Login> {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 10),
                                       child: Text(
-                                        "vagy",
+                                        AppLocalizations.or,
                                         style:
                                             TextStyle(color: Colors.grey[500]),
                                       ),
@@ -262,7 +262,7 @@ class _LoginState extends State<Login> {
                       _isLoading = false;
                     });
                     // Megjelenítünk egy hibaüzenetet
-                    _showWarning('A művelet túl sok időt vett igénybe.');
+                    _showWarning(AppLocalizations.operationTimedOut);
                   },
                 ),
             ],

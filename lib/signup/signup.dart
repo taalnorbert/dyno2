@@ -351,8 +351,8 @@ class _SignupState extends State<Signup> {
                           // ignore: use_build_context_synchronously
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content:
-                                  Text("Registration failed: ${e.toString()}"),
+                              content: Text(
+                                  "${AppLocalizations.registrationFailed}: ${e.toString()}"),
                               backgroundColor: Colors.red,
                             ),
                           );

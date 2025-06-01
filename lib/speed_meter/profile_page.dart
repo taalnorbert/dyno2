@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dyno2/widgets/loading_overlay.dart'; // Importáljuk a LoadingOverlay-t
 import '../localization/app_localizations.dart';
+import 'package:dyno2/speed_meter/widgets/Messages/warning_message.dart';
 
 class ProfilePage extends StatefulWidget {
   final String userEmail;
@@ -20,13 +21,67 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   String? _nickname;
   final _nicknameController = TextEditingController();
-  final _carController = TextEditingController(); // Add this
+  final _carController = TextEditingController();
   String? _profileImageUrl;
   final _imagePicker = ImagePicker();
   String? _selectedCar;
-  bool _isLoading = false; // Aktuális loading állapot tárolásához
+  bool _isLoading = false;
   final _instagramController = TextEditingController();
   String? _instagramUsername;
+
+  // Updated showTopMessage method with closeDialog parameter
+  void showTopMessage(String message,
+      {bool isSuccess = false,
+      bool isWarning = false,
+      bool closeDialog = true}) {
+    Color backgroundColor = isSuccess
+        ? Colors.green
+        : isWarning
+            ? Colors.orange
+            : Colors.red;
+    IconData messageIcon = isSuccess
+        ? Icons.check_circle_outline
+        : isWarning
+            ? Icons.warning_amber_outlined
+            : Icons.error_outline;
+
+    // Show the message as an overlay
+    OverlayState? overlayState = Overlay.of(context);
+    OverlayEntry? overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: 40,
+        left: 0,
+        right: 0,
+        child: Center(
+          child: Material(
+            color: Colors.transparent,
+            child: WarningMessage(
+              message: message,
+              icon: messageIcon,
+              color: backgroundColor,
+              iconColor: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlayState.insert(overlayEntry);
+
+    // Auto-dismiss after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      if (overlayEntry!.mounted) {
+        overlayEntry.remove();
+      }
+    });
+  }
+
+  // Updated showTopWarningMessage helper method with closeDialog parameter
+  void showTopWarningMessage(String message, {bool closeDialog = true}) {
+    showTopMessage(message, isWarning: true, closeDialog: closeDialog);
+  }
 
   @override
   void initState() {
@@ -67,21 +122,15 @@ class _ProfilePageState extends State<ProfilePage> {
       });
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.nicknameUpdated),
-          backgroundColor: Colors.green,
-        ),
-      );
+      showTopMessage(AppLocalizations.nicknameUpdated, isSuccess: true);
     } catch (e) {
       if (!mounted) return;
-      // Hibakezelés, a gomb aktív marad az újrapróbálkozáshoz
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.errorWithMessage(e.toString())),
-          backgroundColor: Colors.red,
-        ),
-      );
+      // Clean the error message by removing the "Exception: " prefix
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith("Exception: ")) {
+        errorMessage = errorMessage.substring("Exception: ".length);
+      }
+      showTopMessage(errorMessage);
     }
   }
 
@@ -120,24 +169,14 @@ class _ProfilePageState extends State<ProfilePage> {
       });
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.profilePictureUpdated),
-          backgroundColor: Colors.green,
-        ),
-      );
+      showTopMessage(AppLocalizations.profilePictureUpdated, isSuccess: true);
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isLoading = false; // Hiba esetén is befejezzük a betöltést
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Hiba történt: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showTopMessage('Hiba történt: ${e.toString()}');
     }
   }
 
@@ -170,24 +209,14 @@ class _ProfilePageState extends State<ProfilePage> {
       });
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.carUpdated),
-          backgroundColor: Colors.green,
-        ),
-      );
+      showTopMessage(AppLocalizations.carUpdated, isSuccess: true);
     } catch (e) {
       if (!mounted) return;
       _safeSetState(() {
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showTopMessage('Error: ${e.toString()}');
     }
   }
 
@@ -220,24 +249,14 @@ class _ProfilePageState extends State<ProfilePage> {
       });
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.instagramUpdated),
-          backgroundColor: Colors.green,
-        ),
-      );
+      showTopMessage(AppLocalizations.instagramUpdated, isSuccess: true);
     } catch (e) {
       if (!mounted) return;
       _safeSetState(() {
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showTopMessage('Error: ${e.toString()}');
     }
   }
 
@@ -354,6 +373,13 @@ class _ProfilePageState extends State<ProfilePage> {
                     return;
                   }
 
+                  // Check if new car model is the same as current
+                  if (carModel == _selectedCar) {
+                    Navigator.pop(context);
+                    showTopWarningMessage(AppLocalizations.carAlreadySelected);
+                    return;
+                  }
+
                   _updateSelectedCar(carModel);
                   Navigator.pop(context);
                 },
@@ -433,12 +459,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   Navigator.pop(dialogContext);
 
                   if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Hiba történt: ${e.toString()}'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  showTopMessage('Hiba történt: ${e.toString()}');
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -468,6 +489,95 @@ class _ProfilePageState extends State<ProfilePage> {
     final newPasswordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
     bool isDialogActive = true; // Track if dialog is still active
+    bool isPasswordVisible = false;
+    bool isConfirmPasswordVisible = false;
+
+    // Password requirement tracking variables
+    bool hasMinLength = false;
+    bool hasUpperCase = false;
+    bool hasNumber = false;
+
+    // Helper method to check password conditions
+    void checkPasswordConditions(String password) {
+      hasMinLength = password.length >= 8;
+      hasUpperCase = password.contains(RegExp(r'[A-Z]'));
+      hasNumber = password.contains(RegExp(r'[0-9]'));
+    }
+
+    // Helper method to build requirement indicators
+    Widget buildPasswordRequirement({
+      required bool isValid,
+      required String text,
+    }) {
+      return Row(
+        children: [
+          Icon(
+            isValid ? Icons.check_circle : Icons.cancel,
+            color: isValid ? Colors.green : Colors.grey,
+            size: 16,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              color: isValid ? Colors.green : Colors.grey,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Helper method to build password fields
+    Widget buildPasswordField({
+      required TextEditingController controller,
+      required String label,
+      bool obscureText = true,
+      Widget? suffixIcon,
+      Function(String)? onChanged,
+    }) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: controller,
+            obscureText: obscureText,
+            style: const TextStyle(color: Colors.white),
+            onChanged: onChanged,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.grey[850],
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Colors.white24),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Colors.green),
+              ),
+              suffixIcon: suffixIcon,
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Képernyő méretének lekérése
+    final Size screenSize = MediaQuery.of(context).size;
 
     showDialog<void>(
       context: context,
@@ -477,248 +587,322 @@ class _ProfilePageState extends State<ProfilePage> {
 
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {
+            // Update password requirements whenever the dialog rebuilds
+            checkPasswordConditions(newPasswordController.text);
+
             return PopScope(
               canPop: !isLoading,
-              child: AlertDialog(
-                backgroundColor: Colors.grey[900],
-                title: Row(
-                  children: [
-                    const Icon(Icons.lock, color: Colors.green),
-                    const SizedBox(width: 10),
-                    Text(
-                      // "Jelszó módosítás" helyett:
-                      AppLocalizations.changePassword,
-                      style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
-                  ],
+              child: Dialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                content: SizedBox(
-                  width: 300,
-                  child: isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator(color: Colors.green),
-                        )
-                      : Column(
-                          mainAxisSize: MainAxisSize.min,
+                child: Container(
+                  width: screenSize.width > 600 ? 450 : screenSize.width * 0.85,
+                  constraints:
+                      BoxConstraints(maxHeight: screenSize.height * 0.85),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Scaffold(
+                      backgroundColor: Colors.grey[900],
+                      appBar: AppBar(
+                        backgroundColor: Colors.grey[850],
+                        title: Row(
                           children: [
-                            TextField(
-                              controller: currentPasswordController,
-                              obscureText: true,
-                              enabled: !isLoading,
-                              style: const TextStyle(color: Colors.white),
-                              decoration: InputDecoration(
-                                // "Jelenlegi jelszó" helyett:
-                                labelText: AppLocalizations.currentPassword,
-                                labelStyle:
-                                    const TextStyle(color: Colors.white70),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide:
-                                      const BorderSide(color: Colors.white54),
+                            const Icon(Icons.lock, color: Colors.green),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                AppLocalizations.changePassword,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide:
-                                      const BorderSide(color: Colors.green),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            TextField(
-                              controller: newPasswordController,
-                              obscureText: true,
-                              enabled: !isLoading,
-                              style: const TextStyle(color: Colors.white),
-                              decoration: InputDecoration(
-                                // "Új jelszó" helyett:
-                                labelText: AppLocalizations.newPassword,
-                                labelStyle:
-                                    const TextStyle(color: Colors.white70),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide:
-                                      const BorderSide(color: Colors.white54),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide:
-                                      const BorderSide(color: Colors.green),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            TextField(
-                              controller: confirmPasswordController,
-                              obscureText: true,
-                              enabled: !isLoading,
-                              style: const TextStyle(color: Colors.white),
-                              decoration: InputDecoration(
-                                // "Új jelszó megerősítése" helyett:
-                                labelText: AppLocalizations.confirmNewPassword,
-                                labelStyle:
-                                    const TextStyle(color: Colors.white70),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide:
-                                      const BorderSide(color: Colors.white54),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide:
-                                      const BorderSide(color: Colors.green),
-                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
                         ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: isLoading
-                        ? null
-                        : () {
-                            isDialogActive =
-                                false; // Mark dialog as inactive before closing
-                            Navigator.of(dialogContext).pop();
-                          },
-                    child: Text(
-                      AppLocalizations.cancel.toUpperCase(),
-                      style: TextStyle(
-                        color: isLoading ? Colors.grey : Colors.white70,
-                        fontSize: 16,
+                        automaticallyImplyLeading: false,
                       ),
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: isLoading
-                        ? null
-                        : () async {
-                            // Store the text values before any async operation
-                            final currentPassword =
-                                currentPasswordController.text;
-                            final newPassword = newPasswordController.text;
-                            final confirmPassword =
-                                confirmPasswordController.text;
-
-                            if (currentPassword.isEmpty ||
-                                newPassword.isEmpty ||
-                                confirmPassword.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  // "Minden mező kitöltése kötelező!" helyett:
-                                  content:
-                                      Text(AppLocalizations.allFieldsRequired),
-                                  backgroundColor: Colors.red,
+                      body: SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        child: isLoading
+                            ? const SizedBox(
+                                height: 150,
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                      color: Colors.green),
                                 ),
-                              );
-                              return;
-                            }
-
-                            if (newPassword != confirmPassword) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  // "Az új jelszavak nem egyeznek!" helyett:
-                                  content: Text(
-                                      AppLocalizations.passwordsDoNotMatch),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                              return;
-                            }
-
-                            if (currentPassword == newPassword) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  // "Az új jelszó nem lehet ugyanaz, mint a jelenlegi!" helyett:
-                                  content: Text(
-                                      AppLocalizations.passwordCannotBeSame),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                              return;
-                            }
-
-                            setState(() => isLoading = true);
-
-                            try {
-                              final isCurrentPasswordValid = await AuthService()
-                                  .verifyPassword(currentPassword);
-
-                              // Check if dialog is still active before continuing
-                              if (!isDialogActive) return;
-
-                              if (!isCurrentPasswordValid) {
-                                if (!mounted || !isDialogActive) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    // "A jelenlegi jelszó helytelen!" helyett:
-                                    content: Text(AppLocalizations
-                                        .currentPasswordIncorrect),
-                                    backgroundColor: Colors.red,
+                              )
+                            : Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    AppLocalizations.changePasswordDescription,
+                                    style: TextStyle(
+                                      color: Colors.grey[400],
+                                      fontSize: 14,
+                                    ),
                                   ),
-                                );
-                                if (isDialogActive) {
-                                  setState(() => isLoading = false);
-                                }
-                                return;
-                              }
+                                  const SizedBox(height: 24),
 
-                              await AuthService().changePassword(newPassword);
+                                  // Current password field
+                                  buildPasswordField(
+                                    controller: currentPasswordController,
+                                    label: AppLocalizations.currentPassword,
+                                  ),
+                                  const SizedBox(height: 16),
 
-                              // Check if dialog is still active before closing
-                              if (!mounted || !isDialogActive) return;
+                                  // New password field with visibility toggle
+                                  buildPasswordField(
+                                    controller: newPasswordController,
+                                    label: AppLocalizations.newPassword,
+                                    obscureText: !isPasswordVisible,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        checkPasswordConditions(value);
+                                      });
+                                    },
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        isPasswordVisible
+                                            ? Icons.visibility
+                                            : Icons.visibility_off,
+                                        color: Colors.grey,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          isPasswordVisible =
+                                              !isPasswordVisible;
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
 
-                              isDialogActive = false; // Mark dialog as inactive
-                              Navigator.of(dialogContext).pop();
+                                  // Confirm password field with visibility toggle
+                                  buildPasswordField(
+                                    controller: confirmPasswordController,
+                                    label: AppLocalizations.confirmNewPassword,
+                                    obscureText: !isConfirmPasswordVisible,
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        isConfirmPasswordVisible
+                                            ? Icons.visibility
+                                            : Icons.visibility_off,
+                                        color: Colors.grey,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          isConfirmPasswordVisible =
+                                              !isConfirmPasswordVisible;
+                                        });
+                                      },
+                                    ),
+                                  ),
 
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  // "Jelszó sikeresen módosítva!" helyett:
-                                  content: Text(AppLocalizations
-                                      .passwordChangedSuccessfully),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            } catch (e) {
-                              // Only update state if dialog is still active
-                              if (isDialogActive) {
-                                setState(() => isLoading = false);
-                              }
-
-                              if (!mounted || !isDialogActive) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                      '${AppLocalizations.error}: ${e.toString()}'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                                  // Password requirements indicators
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 16),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 12),
+                                        buildPasswordRequirement(
+                                          isValid: hasMinLength,
+                                          text: AppLocalizations.atLeast8Chars,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        buildPasswordRequirement(
+                                          isValid: hasUpperCase,
+                                          text: AppLocalizations
+                                              .atLeastOneUppercase,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        buildPasswordRequirement(
+                                          isValid: hasNumber,
+                                          text:
+                                              AppLocalizations.atLeastOneNumber,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                       ),
-                    ),
-                    child: Text(
-                      AppLocalizations.changePassword.toUpperCase(),
-                      style: TextStyle(
-                        color: isLoading ? Colors.grey : Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                      bottomNavigationBar: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 16),
+                        color: Colors.grey[900],
+                        child: SafeArea(
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              // Use Wrap instead of Row for better responsiveness
+                              return Wrap(
+                                alignment: WrapAlignment.end,
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  TextButton(
+                                    onPressed: isLoading
+                                        ? null
+                                        : () {
+                                            isDialogActive = false;
+                                            Navigator.of(dialogContext).pop();
+                                          },
+                                    child: Text(
+                                      AppLocalizations.cancel.toUpperCase(),
+                                      style: TextStyle(
+                                        color: isLoading
+                                            ? Colors.grey
+                                            : Colors.white70,
+                                        fontSize: 14,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: isLoading
+                                        ? null
+                                        : () async {
+                                            final currentPassword =
+                                                currentPasswordController.text;
+                                            final newPassword =
+                                                newPasswordController.text;
+                                            final confirmPassword =
+                                                confirmPasswordController.text;
+
+                                            // Check for empty fields
+                                            if (currentPassword.isEmpty ||
+                                                newPassword.isEmpty ||
+                                                confirmPassword.isEmpty) {
+                                              showTopWarningMessage(
+                                                  AppLocalizations
+                                                      .allFieldsRequired,
+                                                  closeDialog: false);
+                                              return;
+                                            }
+
+                                            // Check password requirements
+                                            if (!hasMinLength ||
+                                                !hasUpperCase ||
+                                                !hasNumber) {
+                                              showTopWarningMessage(
+                                                  AppLocalizations
+                                                      .meetPasswordRequirements,
+                                                  closeDialog: false);
+                                              return;
+                                            }
+
+                                            // Check if passwords match
+                                            if (newPassword !=
+                                                confirmPassword) {
+                                              showTopWarningMessage(
+                                                  AppLocalizations
+                                                      .passwordsDoNotMatch,
+                                                  closeDialog: false);
+                                              return;
+                                            }
+
+                                            // Check if new password is same as current
+                                            if (currentPassword ==
+                                                newPassword) {
+                                              showTopWarningMessage(
+                                                  AppLocalizations
+                                                      .passwordCannotBeSame,
+                                                  closeDialog: false);
+                                              return;
+                                            }
+
+                                            setState(() => isLoading = true);
+
+                                            try {
+                                              final isCurrentPasswordValid =
+                                                  await AuthService()
+                                                      .verifyPassword(
+                                                          currentPassword);
+
+                                              if (!isDialogActive) return;
+
+                                              if (!isCurrentPasswordValid) {
+                                                if (!isDialogActive) return;
+
+                                                setState(() {
+                                                  isLoading = false;
+                                                });
+
+                                                showTopWarningMessage(
+                                                    AppLocalizations
+                                                        .currentPasswordIncorrect,
+                                                    closeDialog: false);
+                                                return;
+                                              }
+
+                                              await AuthService()
+                                                  .changePassword(newPassword);
+
+                                              if (!isDialogActive) return;
+
+                                              isDialogActive = false;
+                                              Navigator.of(dialogContext).pop();
+
+                                              // Only show success message on the main page
+                                              showTopMessage(
+                                                  AppLocalizations
+                                                      .passwordChangedSuccessfully,
+                                                  isSuccess: true);
+                                            } catch (e) {
+                                              if (isDialogActive) {
+                                                setState(() {
+                                                  isLoading = false;
+                                                });
+
+                                                showTopWarningMessage(
+                                                    '${AppLocalizations.error}: ${e.toString()}');
+                                              }
+                                            }
+                                          },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        AppLocalizations.changePassword
+                                            .toUpperCase(),
+                                        style: TextStyle(
+                                          color: isLoading
+                                              ? Colors.grey
+                                              : Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 1,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
             );
           },
         );
       },
     ).then((_) {
-      // Only dispose if dialog is no longer active
       if (isDialogActive) {
         currentPasswordController.dispose();
         newPasswordController.dispose();
@@ -815,28 +999,19 @@ class _ProfilePageState extends State<ProfilePage> {
   void _submitNickname(String value) async {
     if (value.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.emptyNickname),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showTopMessage(AppLocalizations.emptyNickname);
       return;
     }
 
     if (value.length > 10) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.nicknameTooLong),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showTopMessage(AppLocalizations.nicknameTooLong);
       return;
     }
 
     // Ellenőrizzük, hogy a jelenlegi becenév nem ugyanaz-e
     if (value == _nickname) {
+      showTopMessage(AppLocalizations.nicknameAlreadySet, isWarning: true);
       _safeSetState(() {});
       return;
     }
@@ -849,12 +1024,12 @@ class _ProfilePageState extends State<ProfilePage> {
       await _updateNickname(value);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.errorWithMessage(e.toString())),
-          backgroundColor: Colors.red,
-        ),
-      );
+      // Clean the error message by removing the "Exception: " prefix
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith("Exception: ")) {
+        errorMessage = errorMessage.substring("Exception: ".length);
+      }
+      showTopMessage("Hiba: $errorMessage");
     } finally {
       if (mounted) {
         _safeSetState(() {
@@ -862,6 +1037,144 @@ class _ProfilePageState extends State<ProfilePage> {
         });
       }
     }
+  }
+
+  void _showEditNicknameDialog() {
+    _nicknameController.text = _nickname ?? '';
+    bool hasError = false;
+    String errorMessage = '';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              backgroundColor: Colors.grey[900],
+              title: Row(
+                children: [
+                  const Icon(Icons.person, color: Colors.red),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      AppLocalizations.editNickname,
+                      style: const TextStyle(color: Colors.white),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.8,
+                    child: TextField(
+                      controller: _nicknameController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: AppLocalizations.enterNickname,
+                        hintStyle: TextStyle(color: Colors.grey[400]),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: hasError ? Colors.red : Colors.white54,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: hasError ? Colors.red : Colors.red,
+                          ),
+                        ),
+                        counterText: "${_nicknameController.text.length}/10",
+                        counterStyle: TextStyle(
+                          color: _nicknameController.text.length > 10
+                              ? Colors.red
+                              : Colors.grey,
+                        ),
+                      ),
+                      maxLength: 10,
+                      onChanged: (value) {
+                        setState(() {
+                          // Clear error when typing
+                          hasError = false;
+                          errorMessage = '';
+                        });
+                      },
+                    ),
+                  ),
+                  if (hasError)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0, left: 4.0),
+                      child: Text(
+                        errorMessage,
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0, left: 4.0),
+                    child: Text(
+                      AppLocalizations.nicknameInfo,
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    AppLocalizations.cancel,
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final nickname = _nicknameController.text.trim();
+
+                    if (nickname.isEmpty) {
+                      setState(() {
+                        hasError = true;
+                        errorMessage = AppLocalizations.emptyNickname;
+                      });
+                      return;
+                    }
+
+                    if (nickname.length > 10) {
+                      setState(() {
+                        hasError = true;
+                        errorMessage = AppLocalizations.nicknameTooLong;
+                      });
+                      return;
+                    }
+
+                    // Check if the new nickname is the same as current
+                    if (nickname == _nickname) {
+                      Navigator.pop(context);
+                      showTopWarningMessage(
+                          AppLocalizations.nicknameAlreadySet);
+                      return;
+                    }
+
+                    Navigator.pop(context);
+                    _submitNickname(nickname);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(AppLocalizations.save),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -1462,6 +1775,14 @@ class _ProfilePageState extends State<ProfilePage> {
                     return;
                   }
 
+                  // Check if the new username is the same as the current one
+                  if (username == _instagramUsername) {
+                    Navigator.pop(context);
+                    showTopWarningMessage(
+                        AppLocalizations.instagramUsernameAlreadySet);
+                    return;
+                  }
+
                   _updateInstagramUsername(username);
                   Navigator.pop(context);
                 },
@@ -1477,127 +1798,6 @@ class _ProfilePageState extends State<ProfilePage> {
           );
         });
       },
-    );
-  }
-
-  // Add this new method to handle nickname editing with a dialog
-  void _showEditNicknameDialog() {
-    // Képernyő méretének lekérése a reszponzivitáshoz
-    final screenSize = MediaQuery.of(context).size;
-
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        // AlertDialog helyett sima Dialog widget használata a jobb méretezésért
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Container(
-          // Dinamikus szélesség a képernyőméret alapján
-          width: screenSize.width > 600 ? 400 : screenSize.width * 0.85,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF161616),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min, // Minimális méret használata
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Rugalmas címsor
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child:
-                        const Icon(Icons.person, color: Colors.red, size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  // Expanded widget biztosítja, hogy a szöveg ne csorduljon túl
-                  Expanded(
-                    child: Text(
-                      AppLocalizations.editNickname,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow
-                          .ellipsis, // Hosszú szövegeknél három pont
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Beviteli mező
-              TextField(
-                controller: _nicknameController,
-                style: const TextStyle(color: Colors.white),
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: AppLocalizations.enterNickname,
-                  hintStyle: TextStyle(color: Colors.grey[500]),
-                  filled: true,
-                  fillColor: const Color(0xFF212121),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  counterText: '${_nicknameController.text.length}/10',
-                  counterStyle: TextStyle(
-                    color: _nicknameController.text.length > 10
-                        ? Colors.red
-                        : Colors.grey,
-                  ),
-                ),
-                maxLength: 10,
-                onChanged: (value) {
-                  setState(() {});
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Gombokat tartalmazó sor
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.grey,
-                    ),
-                    child: Text(AppLocalizations.cancel.toUpperCase()),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      _submitNickname(_nicknameController.text);
-                      Navigator.pop(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(AppLocalizations.save.toUpperCase()),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

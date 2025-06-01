@@ -10,6 +10,7 @@ import 'dart:convert';
 import 'package:go_router/go_router.dart';
 import 'package:dyno2/speed_meter/widgets/Messages/warning_message.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:dyno2/localization/app_localizations.dart';
 
 class AuthService {
   final logger = Logger();
@@ -175,7 +176,7 @@ class AuthService {
       if (!context.mounted) return;
       _showWarningMessageSafe(
         context,
-        "Registration successful! Please verify your email within 24 hours or your account will be deleted.",
+        AppLocalizations.registrationSuccessVerifyEmail,
         Colors.green,
       );
 
@@ -187,36 +188,36 @@ class AuthService {
 
       switch (e.code) {
         case 'weak-password':
-          message = 'The password provided is too weak.';
+          message = AppLocalizations.weakPassword;
           break;
         case 'email-already-in-use':
-          message = 'An account already exists with that email.';
+          message = AppLocalizations.emailAlreadyInUse;
           break;
         case 'invalid-email':
-          message = 'Invalid email format.';
+          message = AppLocalizations.invalidEmailFormat;
           break;
         case 'operation-not-allowed':
-          message = 'Email/password registration is not enabled.';
+          message = AppLocalizations.emailPasswordRegistrationDisabled;
           break;
         case 'too-many-requests':
-          message = 'Too many requests. Try again later.';
+          message = AppLocalizations.tooManyRequests;
           break;
         default:
-          message = 'Registration error: ${e.message}';
+          message = AppLocalizations.registrationError(e.message ?? '');
       }
       _showWarningMessageSafe(context, message, Colors.red);
     } on SocketException {
       if (!context.mounted) return;
       _showWarningMessageSafe(
         context,
-        'No internet connection. Please check your network settings.',
+        AppLocalizations.noInternetConnection,
         Colors.red,
       );
     } catch (e) {
       if (!context.mounted) return;
       _showWarningMessageSafe(
         context,
-        'Unexpected error: ${e.toString()}',
+        AppLocalizations.errorWithMessage(e.toString()),
         Colors.red,
       );
     }
@@ -242,7 +243,7 @@ class AuthService {
       if (user != null && !user.emailVerified) {
         await user.sendEmailVerification();
         Fluttertoast.showToast(
-          msg: "Verification email resent. Please check your inbox.",
+          msg: AppLocalizations.verificationEmailResent,
           toastLength: Toast.LENGTH_LONG,
           gravity: ToastGravity.BOTTOM,
           backgroundColor: Colors.green,
@@ -254,7 +255,7 @@ class AuthService {
       logger.e('Email verification error:',
           error: e, stackTrace: StackTrace.current);
       Fluttertoast.showToast(
-        msg: "Failed to send verification email. Please try again later.",
+        msg: AppLocalizations.verificationEmailSendFailed,
         toastLength: Toast.LENGTH_LONG,
         gravity: ToastGravity.BOTTOM,
         backgroundColor: Colors.red,
@@ -283,7 +284,7 @@ class AuthService {
         _showWarningMessageSafe(
           // ignore: use_build_context_synchronously
           context,
-          "Please verify your email before logging in. Check your inbox.",
+          AppLocalizations.pleaseVerifyEmail,
           Colors.orange,
         );
 
@@ -293,22 +294,22 @@ class AuthService {
           builder: (BuildContext dialogContext) {
             return AlertDialog(
               backgroundColor: Colors.grey[900],
-              title: const Text('Email Not Verified',
+              title: Text(AppLocalizations.emailNotVerified,
                   style: TextStyle(color: Colors.white)),
-              content: const Text(
-                'Would you like to resend the verification email?',
+              content: Text(
+                AppLocalizations.resendVerificationEmailQuestion,
                 style: TextStyle(color: Colors.white70),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext, false),
-                  child: const Text('Cancel',
+                  child: Text(AppLocalizations.cancel,
                       style: TextStyle(color: Colors.grey)),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext, true),
-                  child:
-                      const Text('Resend', style: TextStyle(color: Colors.red)),
+                  child: Text(AppLocalizations.resend,
+                      style: TextStyle(color: Colors.red)),
                 ),
               ],
             );
@@ -328,7 +329,7 @@ class AuthService {
           if (!context.mounted) return;
           _showWarningMessageSafe(
             context,
-            "Verification email resent. Please check your inbox.",
+            AppLocalizations.verificationEmailResent,
             Colors.green,
           );
         }
@@ -341,15 +342,13 @@ class AuthService {
       }
     } on FirebaseAuthException catch (e) {
       if (!context.mounted) return;
-      String message = 'An error occurred during sign in';
+      String message = AppLocalizations.signInError;
       if (e.code == 'user-not-found') {
-        message = 'No user found for that email.';
+        message = AppLocalizations.noUserFound;
       } else if (e.code == 'wrong-password') {
-        message = 'Wrong password provided for that user.';
+        message = AppLocalizations.wrongPassword;
       }
 
-      // Ahelyett hogy csak a context-be küldenénk a hibát,
-      // dobjunk egy konkrét exception-t, amit a hívó kezelhet
       throw Exception(message);
     }
   }
@@ -474,7 +473,7 @@ class AuthService {
       // Ellenőrizzük, hogy a becenév már foglalt-e
       final isAvailable = await isNicknameAvailable(nickname);
       if (!isAvailable) {
-        throw Exception('Ez a becenév már foglalt!');
+        throw Exception(AppLocalizations.nicknameAlreadyTaken);
       }
 
       final user = _auth.currentUser;
@@ -558,19 +557,23 @@ class AuthService {
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
 
+      // Add mounted check before using context
+      if (!context.mounted) return;
+
       // Show success message
       showWarningMessage(
-        // ignore: use_build_context_synchronously
         context,
-        "Password reset email sent. Please check your inbox.",
+        AppLocalizations.passwordResetEmailSent,
         Colors.green,
       );
     } on FirebaseAuthException catch (e) {
-      String message = 'An error occurred';
+      // Add mounted check before using context
+      if (!context.mounted) return;
+
+      String message = AppLocalizations.errorOccurred;
       if (e.code == 'user-not-found') {
-        message = 'No user found for that email.';
+        message = AppLocalizations.noUserFound;
       }
-      // ignore: use_build_context_synchronously
       showWarningMessage(context, message, Colors.red);
     }
   }

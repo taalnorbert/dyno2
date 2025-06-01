@@ -1378,4 +1378,257 @@ class AppLocalizations {
       return "YES";
     }
   }
+
+  // Add this new getter near other password-related strings (around line 1040-1080)
+
+  static String get changePasswordDescription {
+    if (_languageProvider.isHungarian) {
+      return "A jelszó módosításához add meg jelenlegi jelszavad, majd az új jelszót kétszer.";
+    } else if (_languageProvider.isGerman) {
+      return "Geben Sie Ihr aktuelles Passwort und dann zweimal Ihr neues Passwort ein, um es zu ändern.";
+    } else {
+      return "To change your password, enter your current password, then enter your new password twice.";
+    }
+  }
+
+  static String get carAlreadySelected {
+    if (_languageProvider.isHungarian) {
+      return "Ez az autó már ki van választva!";
+    } else if (_languageProvider.isGerman) {
+      return "Dieses Auto ist bereits ausgewählt!";
+    } else {
+      return "This car is already selected!";
+    }
+  }
+
+  static String get instagramUsernameAlreadySet {
+    if (_languageProvider.isHungarian) {
+      return "Ez az Instagram felhasználónév már be van állítva!";
+    } else if (_languageProvider.isGerman) {
+      return "Dieser Instagram-Benutzername ist bereits eingestellt!";
+    } else {
+      return "This Instagram username is already set!";
+    }
+  }
+
+  static String get nicknameAlreadySet {
+    if (_languageProvider.isHungarian) {
+      return "Ez a becenév már be van állítva!";
+    } else if (_languageProvider.isGerman) {
+      return "Dieser Spitzname ist bereits eingestellt!";
+    } else {
+      return "This nickname is already set!";
+    }
+  }
+
+  static String get nicknameInfo {
+    if (_languageProvider.isHungarian) {
+      return "A beceneved látható lesz más felhasználók számára. Maximum 10 karakter engedélyezett.";
+    } else if (_languageProvider.isGerman) {
+      return "Dein Spitzname wird für andere Benutzer sichtbar sein. Maximal 10 Zeichen erlaubt.";
+    } else {
+      return "Your nickname will be visible to other users. Maximum 10 characters allowed.";
+    }
+  }
+
+  // Auth related messages
+  static String get nicknameAlreadyTaken {
+    if (_languageProvider.isHungarian) {
+      return "Ez a becenév már foglalt!";
+    } else if (_languageProvider.isGerman) {
+      return "Dieser Spitzname ist bereits vergeben!";
+    } else {
+      return "This nickname is already taken!";
+    }
+  }
+
+  static String get registrationSuccessVerifyEmail {
+    if (_languageProvider.isHungarian) {
+      return "Sikeres regisztráció! Kérjük, erősítsd meg az e-mail címedet 24 órán belül, különben a fiókod törlésre kerül.";
+    } else if (_languageProvider.isGerman) {
+      return "Registrierung erfolgreich! Bitte bestätigen Sie Ihre E-Mail-Adresse innerhalb von 24 Stunden, sonst wird Ihr Konto gelöscht.";
+    } else {
+      return "Registration successful! Please verify your email within 24 hours or your account will be deleted.";
+    }
+  }
+
+  static String get weakPassword {
+    if (_languageProvider.isHungarian) {
+      return "A megadott jelszó túl gyenge.";
+    } else if (_languageProvider.isGerman) {
+      return "Das angegebene Passwort ist zu schwach.";
+    } else {
+      return "The password provided is too weak.";
+    }
+  }
+
+  static String get emailAlreadyInUse {
+    if (_languageProvider.isHungarian) {
+      return "Ezzel az e-mail címmel már létezik fiók.";
+    } else if (_languageProvider.isGerman) {
+      return "Mit dieser E-Mail-Adresse existiert bereits ein Konto.";
+    } else {
+      return "An account already exists with that email.";
+    }
+  }
+
+  static String get invalidEmailFormat {
+    if (_languageProvider.isHungarian) {
+      return "Érvénytelen e-mail formátum.";
+    } else if (_languageProvider.isGerman) {
+      return "Ungültiges E-Mail-Format.";
+    } else {
+      return "Invalid email format.";
+    }
+  }
+
+  static String get emailPasswordRegistrationDisabled {
+    if (_languageProvider.isHungarian) {
+      return "E-mail/jelszó regisztráció nem engedélyezett.";
+    } else if (_languageProvider.isGerman) {
+      return "E-Mail/Passwort-Registrierung ist nicht aktiviert.";
+    } else {
+      return "Email/password registration is not enabled.";
+    }
+  }
+
+  static String get tooManyRequests {
+    if (_languageProvider.isHungarian) {
+      return "Túl sok kérés. Próbáld újra később.";
+    } else if (_languageProvider.isGerman) {
+      return "Zu viele Anfragen. Versuchen Sie es später erneut.";
+    } else {
+      return "Too many requests. Try again later.";
+    }
+  }
+
+  static String registrationError(String errorMessage) {
+    if (_languageProvider.isHungarian) {
+      return "Regisztrációs hiba: $errorMessage";
+    } else if (_languageProvider.isGerman) {
+      return "Registrierungsfehler: $errorMessage";
+    } else {
+      return "Registration error: $errorMessage";
+    }
+  }
+
+  static String get noInternetConnection {
+    if (_languageProvider.isHungarian) {
+      return "Nincs internet kapcsolat. Ellenőrizd a hálózati beállításaidat.";
+    } else if (_languageProvider.isGerman) {
+      return "Keine Internetverbindung. Bitte überprüfen Sie Ihre Netzwerkeinstellungen.";
+    } else {
+      return "No internet connection. Please check your network settings.";
+    }
+  }
+
+  static String get verificationEmailResent {
+    if (_languageProvider.isHungarian) {
+      return "Ellenőrző e-mail újraküldve. Kérjük, ellenőrizd a postafiókod.";
+    } else if (_languageProvider.isGerman) {
+      return "Bestätigungs-E-Mail erneut gesendet. Bitte überprüfen Sie Ihren Posteingang.";
+    } else {
+      return "Verification email resent. Please check your inbox.";
+    }
+  }
+
+  static String get verificationEmailSendFailed {
+    if (_languageProvider.isHungarian) {
+      return "Nem sikerült elküldeni az ellenőrző e-mailt. Kérjük, próbáld újra később.";
+    } else if (_languageProvider.isGerman) {
+      return "Senden der Bestätigungs-E-Mail fehlgeschlagen. Bitte versuchen Sie es später erneut.";
+    } else {
+      return "Failed to send verification email. Please try again later.";
+    }
+  }
+
+  static String get pleaseVerifyEmail {
+    if (_languageProvider.isHungarian) {
+      return "Kérjük, ellenőrizd az e-mail címed a bejelentkezés előtt. Ellenőrizd a postafiókod.";
+    } else if (_languageProvider.isGerman) {
+      return "Bitte bestätigen Sie Ihre E-Mail-Adresse vor dem Anmelden. Überprüfen Sie Ihren Posteingang.";
+    } else {
+      return "Please verify your email before logging in. Check your inbox.";
+    }
+  }
+
+  static String get emailNotVerified {
+    if (_languageProvider.isHungarian) {
+      return "E-mail nincs megerősítve";
+    } else if (_languageProvider.isGerman) {
+      return "E-Mail nicht bestätigt";
+    } else {
+      return "Email Not Verified";
+    }
+  }
+
+  static String get resendVerificationEmailQuestion {
+    if (_languageProvider.isHungarian) {
+      return "Szeretnéd újraküldeni az ellenőrző e-mailt?";
+    } else if (_languageProvider.isGerman) {
+      return "Möchten Sie die Bestätigungs-E-Mail erneut senden?";
+    } else {
+      return "Would you like to resend the verification email?";
+    }
+  }
+
+  static String get resend {
+    if (_languageProvider.isHungarian) {
+      return "Újraküldés";
+    } else if (_languageProvider.isGerman) {
+      return "Erneut senden";
+    } else {
+      return "Resend";
+    }
+  }
+
+  static String get signInError {
+    if (_languageProvider.isHungarian) {
+      return "Hiba történt a bejelentkezés során";
+    } else if (_languageProvider.isGerman) {
+      return "Während der Anmeldung ist ein Fehler aufgetreten";
+    } else {
+      return "An error occurred during sign in";
+    }
+  }
+
+  static String get noUserFound {
+    if (_languageProvider.isHungarian) {
+      return "Nem található felhasználó ezzel az e-mail címmel.";
+    } else if (_languageProvider.isGerman) {
+      return "Kein Benutzer mit dieser E-Mail-Adresse gefunden.";
+    } else {
+      return "No user found for that email.";
+    }
+  }
+
+  static String get wrongPassword {
+    if (_languageProvider.isHungarian) {
+      return "Hibás jelszó a felhasználóhoz.";
+    } else if (_languageProvider.isGerman) {
+      return "Falsches Passwort für diesen Benutzer angegeben.";
+    } else {
+      return "Wrong password provided for that user.";
+    }
+  }
+
+  static String get passwordResetEmailSent {
+    if (_languageProvider.isHungarian) {
+      return "Jelszó-visszaállítási e-mail elküldve. Kérjük, ellenőrizd a postafiókod.";
+    } else if (_languageProvider.isGerman) {
+      return "E-Mail zum Zurücksetzen des Passworts gesendet. Bitte überprüfen Sie Ihren Posteingang.";
+    } else {
+      return "Password reset email sent. Please check your inbox.";
+    }
+  }
+
+  static String get errorOccurred {
+    if (_languageProvider.isHungarian) {
+      return "Hiba történt";
+    } else if (_languageProvider.isGerman) {
+      return "Ein Fehler ist aufgetreten";
+    } else {
+      return "An error occurred";
+    }
+  }
 }

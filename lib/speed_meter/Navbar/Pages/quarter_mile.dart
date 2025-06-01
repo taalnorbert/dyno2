@@ -215,7 +215,8 @@ class _QuarterMileState extends State<QuarterMile> {
                 context.pop(); // Visszamegy az előző oldalra
               }
             },
-            resultText: "¼ Mile Time", // Módosított eredménykiírás
+            resultText:
+                AppLocalizations.quarterMileTime, // Módosított eredménykiírás
           );
         }
       }).catchError((error) {
@@ -232,7 +233,7 @@ class _QuarterMileState extends State<QuarterMile> {
                 context.pop(); // Visszamegy az előző oldalra
               }
             },
-            resultText: "¼ Mile Time", // Itt is módosítva
+            resultText: AppLocalizations.quarterMileTime, // Itt is módosítva
           );
         }
       });

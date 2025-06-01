@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../localization/app_localizations.dart';
 
 void showResultAndReturnToHomePage(
   BuildContext context,
@@ -39,7 +40,7 @@ void showResultAndReturnToHomePage(
               ),
               SizedBox(height: 5),
               Text(
-                "${elapsedTime.inSeconds}.${elapsedTime.inMilliseconds % 1000} másodperc",
+                AppLocalizations.formatElapsedTimeMillis(elapsedTime),
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -60,9 +61,10 @@ void showResultAndReturnToHomePage(
                   ),
                   padding: EdgeInsets.symmetric(horizontal: 30, vertical: 12),
                 ),
-                child: Text("OK",
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                child: Text(
+                  AppLocalizations.ok,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),

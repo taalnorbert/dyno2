@@ -1260,4 +1260,122 @@ class AppLocalizations {
       return "Error";
     }
   }
+
+  // A közvetlen "No results" segítő szövegek
+  static String get createMeasurementsMessage {
+    if (_languageProvider.isHungarian) {
+      return "Készíts méréseket, hogy eredményeid legyenek!";
+    } else if (_languageProvider.isGerman) {
+      return "Führe Messungen durch, um Ergebnisse zu erhalten!";
+    } else {
+      return "Create measurements to see your results here!";
+    }
+  }
+
+  static String get noResultsYetMessage {
+    if (_languageProvider.isHungarian) {
+      return "Ma még nem született eredmény. Légy te az első!";
+    } else if (_languageProvider.isGerman) {
+      return "Heute wurden noch keine Ergebnisse erzielt. Sei der Erste!";
+    } else {
+      return "No results recorded today. Be the first one!";
+    }
+  }
+
+  static String get startMeasuring {
+    if (_languageProvider.isHungarian) {
+      return "Mérés indítása";
+    } else if (_languageProvider.isGerman) {
+      return "Messung starten";
+    } else {
+      return "Start measuring";
+    }
+  }
+
+  // Result dialog másodperc formátum
+  static String formatElapsedTimeMillis(Duration elapsedTime) {
+    if (_languageProvider.isHungarian) {
+      return "${elapsedTime.inSeconds}.${elapsedTime.inMilliseconds % 1000} másodperc";
+    } else if (_languageProvider.isGerman) {
+      return "${elapsedTime.inSeconds}.${elapsedTime.inMilliseconds % 1000} Sekunden";
+    } else {
+      return "${elapsedTime.inSeconds}.${elapsedTime.inMilliseconds % 1000} seconds";
+    }
+  }
+
+  // User label a competition oldalon
+  static String get user {
+    if (_languageProvider.isHungarian) {
+      return "Felhasználó";
+    } else if (_languageProvider.isGerman) {
+      return "Benutzer";
+    } else {
+      return "User";
+    }
+  }
+
+  // Error prefix
+  static String errorWithMessage(String message) {
+    if (_languageProvider.isHungarian) {
+      return "Hiba: $message";
+    } else if (_languageProvider.isGerman) {
+      return "Fehler: $message";
+    } else {
+      return "Error: $message";
+    }
+  }
+
+  // Competitions táblázat fejléc: Eredmény
+  static String get result {
+    if (_languageProvider.isHungarian) {
+      return "Eredmény";
+    } else if (_languageProvider.isGerman) {
+      return "Ergebnis";
+    } else {
+      return "Result";
+    }
+  }
+
+  // ¼ Mile felirat szövege
+  static String get quarterMile {
+    if (_languageProvider.isHungarian) {
+      return "¼ Mérföld";
+    } else if (_languageProvider.isGerman) {
+      return "¼ Meile";
+    } else {
+      return "¼ Mile";
+    }
+  }
+
+  // ¼ Mile Time eredmény szöveg
+  static String get quarterMileTime {
+    if (_languageProvider.isHungarian) {
+      return "¼ Mérföld Idő";
+    } else if (_languageProvider.isGerman) {
+      return "¼ Meile Zeit";
+    } else {
+      return "¼ Mile Time";
+    }
+  }
+
+  // Megerősítés leírása változásokhoz (pl. törlés esetén)
+  static String get confirmAction {
+    if (_languageProvider.isHungarian) {
+      return "MÉGSE";
+    } else if (_languageProvider.isGerman) {
+      return "ABBRECHEN";
+    } else {
+      return "CANCEL";
+    }
+  }
+
+  static String get confirmActionYes {
+    if (_languageProvider.isHungarian) {
+      return "IGEN";
+    } else if (_languageProvider.isGerman) {
+      return "JA";
+    } else {
+      return "YES";
+    }
+  }
 }

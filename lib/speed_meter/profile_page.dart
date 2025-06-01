@@ -78,7 +78,7 @@ class _ProfilePageState extends State<ProfilePage> {
       // Hibakezelés, a gomb aktív marad az újrapróbálkozáshoz
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString()),
+          content: Text(AppLocalizations.errorWithMessage(e.toString())),
           backgroundColor: Colors.red,
         ),
       );
@@ -851,7 +851,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Hiba: ${e.toString()}'),
+          content: Text(AppLocalizations.errorWithMessage(e.toString())),
           backgroundColor: Colors.red,
         ),
       );

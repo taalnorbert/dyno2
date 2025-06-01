@@ -419,11 +419,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                         // SizedBox(width: 30), // Helyezés számának helye
                         Expanded(
                           child: Text(
-                            _languageProvider.isHungarian
-                                ? "Felhasználó"
-                                : _languageProvider.isGerman
-                                    ? "Benutzer"
-                                    : "User",
+                            AppLocalizations.user,
                             textAlign: TextAlign.left,
                             style: TextStyle(
                               color: _textWhite,
@@ -716,11 +712,83 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
     final data = _activeData!;
     if (data.isEmpty) {
       return Center(
-        child: Text(
-          _showPersonalResults
-              ? AppLocalizations.noPersonalResults
-              : AppLocalizations.noDailyResults,
-          style: TextStyle(color: Colors.white70),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: _cardBlack,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _primaryRed.withAlpha(50), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(50),
+                blurRadius: 10,
+                spreadRadius: 0,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: _primaryRed.withAlpha(20),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _showPersonalResults
+                      ? Icons.history
+                      : Icons.emoji_events_outlined,
+                  size: 40,
+                  color: _primaryRed,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                _showPersonalResults
+                    ? AppLocalizations.noPersonalResults
+                    : AppLocalizations.noDailyResults,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _showPersonalResults
+                    ? AppLocalizations.createMeasurementsMessage
+                    : AppLocalizations.noResultsYetMessage,
+                style: TextStyle(
+                  color: Colors.white.withAlpha(150),
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              if (_showPersonalResults && AuthService().currentUser != null)
+                OutlinedButton.icon(
+                  onPressed: () {
+                    context.go('/home');
+                  },
+                  icon: const Icon(Icons.speed, size: 16),
+                  label: Text(AppLocalizations.startMeasuring),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _primaryRed,
+                    side: BorderSide(color: _primaryRed),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       );
     }

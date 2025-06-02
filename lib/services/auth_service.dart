@@ -342,91 +342,98 @@ class AuthService {
     }
   }
 
-  Future<void> signin({
+  Future<bool> signin({
     required String email,
     required String password,
     required BuildContext context,
   }) async {
     try {
-      if (!context.mounted) return;
-      UserCredential userCredential =
-          await FirebaseAuth.instance.signInWithEmailAndPassword(
+      // Check for empty fields
+      if (email.isEmpty) {
+        if (!context.mounted) return false;
+        _showWarningMessageSafe(
+            context, AppLocalizations.emailRequired, Colors.red);
+        return false;
+      }
+      if (password.isEmpty) {
+        if (!context.mounted) return false;
+        _showWarningMessageSafe(
+            context, AppLocalizations.passwordRequired, Colors.red);
+        return false;
+      }
+
+      // Authenticate the user
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      if (!context.mounted) return;
-      if (!userCredential.user!.emailVerified) {
-        await FirebaseAuth.instance.signOut();
-        _showWarningMessageSafe(
-          // ignore: use_build_context_synchronously
-          context,
-          AppLocalizations.pleaseVerifyEmail,
-          Colors.orange,
-        );
+      // Check if the user's email is verified
+      final user = userCredential.user;
+      if (user != null) {
+        // If email is verified, update the flag in Firestore
+        if (user.emailVerified) {
+          // Get current verification status from Firestore
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
 
-        if (!context.mounted) return;
-        bool? resendEmail = await showDialog<bool>(
-          context: context,
-          builder: (BuildContext dialogContext) {
-            return AlertDialog(
-              backgroundColor: Colors.grey[900],
-              title: Text(AppLocalizations.emailNotVerified,
-                  style: TextStyle(color: Colors.white)),
-              content: Text(
-                AppLocalizations.resendVerificationEmailQuestion,
-                style: TextStyle(color: Colors.white70),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext, false),
-                  child: Text(AppLocalizations.cancel,
-                      style: TextStyle(color: Colors.grey)),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext, true),
-                  child: Text(AppLocalizations.resend,
-                      style: TextStyle(color: Colors.red)),
-                ),
-              ],
-            );
-          },
-        );
-
-        if (resendEmail == true) {
-          if (!context.mounted) return;
-          userCredential =
-              await FirebaseAuth.instance.signInWithEmailAndPassword(
-            email: email,
-            password: password,
-          );
-
-          await userCredential.user?.sendEmailVerification();
-
-          if (!context.mounted) return;
-          _showWarningMessageSafe(
-            context,
-            AppLocalizations.verificationEmailResent,
-            Colors.green,
-          );
+          // Only update if the flag is currently false
+          if (userDoc.exists && userDoc.data()?['isVerified'] == false) {
+            await _markUserAsVerified(user.uid);
+            logger.i('User ${user.email} marked as verified in Firestore');
+          }
         }
-        return;
-      } else {
-        // Mark user as verified in Firestore if email is verified
-        await _markUserAsVerified(userCredential.user!.uid);
-        if (!context.mounted) return;
-        context.go('/home');
+        // If email is not verified, show warning
+        else {
+          if (!context.mounted) return false;
+          _showWarningMessageSafe(
+              context, AppLocalizations.pleaseVerifyEmail, Colors.orange);
+          // You might want to show a dialog to resend verification here
+        }
       }
+
+      // Redirect to home page if everything is successful
+      if (!context.mounted) return false;
+      context.go('/home');
+      return true;
     } on FirebaseAuthException catch (e) {
-      if (!context.mounted) return;
-      String message = AppLocalizations.signInError;
-      if (e.code == 'user-not-found') {
-        message = AppLocalizations.noUserFound;
-      } else if (e.code == 'wrong-password') {
-        message = AppLocalizations.wrongPassword;
+      if (!context.mounted) return false;
+      String message;
+
+      // More detailed error handling based on Firebase error codes
+      switch (e.code) {
+        case 'user-not-found':
+          message = AppLocalizations.noUserFound;
+          break;
+        case 'wrong-password':
+          message = AppLocalizations.wrongPassword;
+          break;
+        case 'invalid-email':
+          message = AppLocalizations.invalidEmailFormat;
+          break;
+        case 'user-disabled':
+          message = AppLocalizations.accountDisabled;
+          break;
+        case 'too-many-requests':
+          message = AppLocalizations.tooManyLoginAttempts;
+          break;
+        case 'network-request-failed':
+          message = AppLocalizations.networkError;
+          break;
+        default:
+          // Log unknown errors for debugging
+          logger.e('Unhandled Firebase Auth error: ${e.code}', error: e);
+          message = AppLocalizations.signInError;
+          break;
       }
 
       throw Exception(message);
+    } catch (e) {
+      // Handle other types of errors
+      logger.e('General signin error:', error: e);
+      throw Exception(AppLocalizations.errorWithMessage(e.toString()));
     }
   }
 

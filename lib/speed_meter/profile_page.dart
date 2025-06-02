@@ -1348,7 +1348,8 @@ class _ProfilePageState extends State<ProfilePage> {
       return;
     }
 
-    if (value.length > 10) {
+    if (value.length > 25) {
+      // Changed from 10 to 25
       if (!mounted) return;
       showTopMessage(AppLocalizations.nicknameTooLong);
       return;
@@ -1433,14 +1434,16 @@ class _ProfilePageState extends State<ProfilePage> {
                             color: hasError ? Colors.red : Colors.red,
                           ),
                         ),
-                        counterText: "${_nicknameController.text.length}/10",
+                        counterText:
+                            "${_nicknameController.text.length}/25", // Changed from 10 to 25
                         counterStyle: TextStyle(
-                          color: _nicknameController.text.length > 10
+                          color: _nicknameController.text.length >
+                                  25 // Changed from 10 to 25
                               ? Colors.red
                               : Colors.grey,
                         ),
                       ),
-                      maxLength: 10,
+                      maxLength: 25, // Changed from 10 to 25
                       onChanged: (value) {
                         setState(() {
                           // Clear error when typing
@@ -1487,7 +1490,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       return;
                     }
 
-                    if (nickname.length > 10) {
+                    if (nickname.length > 25) {
+                      // Changed from 10 to 25
                       setState(() {
                         hasError = true;
                         errorMessage = AppLocalizations.nicknameTooLong;

@@ -67,8 +67,15 @@ class _LoginState extends State<Login> {
     } catch (e) {
       // Explicit módon állítsuk le a betöltést és mutassuk a hibaüzenetet
       setState(() {
-        _isLoading = false; // Explicit módon megállítjuk a betöltést
-        _showWarning(e.toString());
+        _isLoading = false;
+
+        // Clean up the error message by removing "Exception: " prefix
+        String errorMsg = e.toString();
+        if (errorMsg.startsWith("Exception: ")) {
+          errorMsg = errorMsg.substring("Exception: ".length);
+        }
+
+        _showWarning(errorMsg);
       });
     }
   }
@@ -147,7 +154,8 @@ class _LoginState extends State<Login> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _showWarning('${AppLocalizations.googleSignInError}: ${e.toString()}');
+          _showWarning(
+              '${AppLocalizations.googleSignInError}: ${e.toString()}');
         });
       }
     }

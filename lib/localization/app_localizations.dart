@@ -1177,11 +1177,11 @@ class AppLocalizations {
 
   static String get nicknameTooLong {
     if (_languageProvider.isHungarian) {
-      return "A becenév maximum 10 karakter lehet!";
+      return "A becenév nem lehet hosszabb 25 karakternél"; // Updated from 10
     } else if (_languageProvider.isGerman) {
-      return "Der Spitzname darf maximal 10 Zeichen lang sein!";
+      return "Der Spitzname darf nicht länger als 25 Zeichen sein"; // Updated from 10
     } else {
-      return "Nickname cannot exceed 10 characters!";
+      return "Nickname cannot be longer than 25 characters"; // Updated from 10
     }
   }
 
@@ -1423,11 +1423,11 @@ class AppLocalizations {
 
   static String get nicknameInfo {
     if (_languageProvider.isHungarian) {
-      return "A beceneved látható lesz más felhasználók számára. Maximum 10 karakter engedélyezett.";
+      return "A becenév maximum 25 karakter hosszú lehet"; // Updated from 10
     } else if (_languageProvider.isGerman) {
-      return "Dein Spitzname wird für andere Benutzer sichtbar sein. Maximal 10 Zeichen erlaubt.";
+      return "Der Spitzname kann bis zu 25 Zeichen lang sein"; // Updated from 10
     } else {
-      return "Your nickname will be visible to other users. Maximum 10 characters allowed.";
+      return "The nickname can be up to 25 characters long"; // Updated from 10
     }
   }
 
@@ -1701,4 +1701,50 @@ class AppLocalizations {
       return "Account successfully deleted!";
     }
   }
+
+
+// Add these if they don't exist:
+
+static String get emailRequired {
+  if (_languageProvider.isHungarian) {
+    return "Kérjük, adja meg e-mail címét";
+  } else if (_languageProvider.isGerman) {
+    return "Bitte geben Sie Ihre E-Mail-Adresse ein";
+  } else {
+    return "Please enter your email address";
+  }
+}
+
+
+static String get accountDisabled {
+  if (_languageProvider.isHungarian) {
+    return "Ez a fiók letiltásra került";
+  } else if (_languageProvider.isGerman) {
+    return "Dieses Konto wurde deaktiviert";
+  } else {
+    return "This account has been disabled";
+  }
+}
+
+static String get tooManyLoginAttempts {
+  if (_languageProvider.isHungarian) {
+    return "Túl sok bejelentkezési kísérlet. Kérjük, próbálja újra később.";
+  } else if (_languageProvider.isGerman) {
+    return "Zu viele Anmeldeversuche. Bitte versuchen Sie es später erneut.";
+  } else {
+    return "Too many login attempts. Please try again later.";
+  }
+}
+
+static String get networkError {
+  if (_languageProvider.isHungarian) {
+    return "Hálózati hiba történt. Kérjük, ellenőrizze internetkapcsolatát.";
+  } else if (_languageProvider.isGerman) {
+    return "Ein Netzwerkfehler ist aufgetreten. Bitte überprüfen Sie Ihre Internetverbindung.";
+  } else {
+    return "A network error occurred. Please check your internet connection.";
+  }
+}
+
+
 }

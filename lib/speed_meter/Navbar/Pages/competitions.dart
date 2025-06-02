@@ -749,19 +749,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
               const SizedBox(height: 20),
               Text(
                 _showPersonalResults
-                    ? AppLocalizations.noPersonalResults
-                    : AppLocalizations.noDailyResults,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _showPersonalResults
-                    ? AppLocalizations.createMeasurementsMessage
+                    ? AppLocalizations.noMeasurementsInCategory
                     : AppLocalizations.noResultsYetMessage,
                 style: TextStyle(
                   color: Colors.white.withAlpha(150),
@@ -769,24 +757,6 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 20),
-              if (_showPersonalResults && AuthService().currentUser != null)
-                OutlinedButton.icon(
-                  onPressed: () {
-                    context.go('/home');
-                  },
-                  icon: const Icon(Icons.speed, size: 16),
-                  label: Text(AppLocalizations.startMeasuring),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _primaryRed,
-                    side: BorderSide(color: _primaryRed),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
             ],
           ),
         ),

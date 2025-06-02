@@ -1702,49 +1702,55 @@ class AppLocalizations {
     }
   }
 
-
 // Add these if they don't exist:
 
-static String get emailRequired {
-  if (_languageProvider.isHungarian) {
-    return "Kérjük, adja meg e-mail címét";
-  } else if (_languageProvider.isGerman) {
-    return "Bitte geben Sie Ihre E-Mail-Adresse ein";
-  } else {
-    return "Please enter your email address";
+  static String get emailRequired {
+    if (_languageProvider.isHungarian) {
+      return "Kérjük, adja meg e-mail címét";
+    } else if (_languageProvider.isGerman) {
+      return "Bitte geben Sie Ihre E-Mail-Adresse ein";
+    } else {
+      return "Please enter your email address";
+    }
   }
-}
 
-
-static String get accountDisabled {
-  if (_languageProvider.isHungarian) {
-    return "Ez a fiók letiltásra került";
-  } else if (_languageProvider.isGerman) {
-    return "Dieses Konto wurde deaktiviert";
-  } else {
-    return "This account has been disabled";
+  static String get accountDisabled {
+    if (_languageProvider.isHungarian) {
+      return "Ez a fiók letiltásra került";
+    } else if (_languageProvider.isGerman) {
+      return "Dieses Konto wurde deaktiviert";
+    } else {
+      return "This account has been disabled";
+    }
   }
-}
 
-static String get tooManyLoginAttempts {
-  if (_languageProvider.isHungarian) {
-    return "Túl sok bejelentkezési kísérlet. Kérjük, próbálja újra később.";
-  } else if (_languageProvider.isGerman) {
-    return "Zu viele Anmeldeversuche. Bitte versuchen Sie es später erneut.";
-  } else {
-    return "Too many login attempts. Please try again later.";
+  static String get tooManyLoginAttempts {
+    if (_languageProvider.isHungarian) {
+      return "Túl sok bejelentkezési kísérlet. Kérjük, próbálja újra később.";
+    } else if (_languageProvider.isGerman) {
+      return "Zu viele Anmeldeversuche. Bitte versuchen Sie es später erneut.";
+    } else {
+      return "Too many login attempts. Please try again later.";
+    }
   }
-}
 
-static String get networkError {
-  if (_languageProvider.isHungarian) {
-    return "Hálózati hiba történt. Kérjük, ellenőrizze internetkapcsolatát.";
-  } else if (_languageProvider.isGerman) {
-    return "Ein Netzwerkfehler ist aufgetreten. Bitte überprüfen Sie Ihre Internetverbindung.";
-  } else {
-    return "A network error occurred. Please check your internet connection.";
+  static String get networkError {
+    if (_languageProvider.isHungarian) {
+      return "Hálózati hiba történt. Kérjük, ellenőrizze internetkapcsolatát.";
+    } else if (_languageProvider.isGerman) {
+      return "Ein Netzwerkfehler ist aufgetreten. Bitte überprüfen Sie Ihre Internetverbindung.";
+    } else {
+      return "A network error occurred. Please check your internet connection.";
+    }
   }
-}
 
-
+  static String get noMeasurementsInCategory {
+    if (_languageProvider.isHungarian) {
+      return "Még nem végeztél mérést ebben a kategóriában.";
+    } else if (_languageProvider.isGerman) {
+      return "Du hast in dieser Kategorie noch keine Messungen durchgeführt.";
+    } else {
+      return "You haven't made any measurements in this category yet.";
+    }
+  }
 }

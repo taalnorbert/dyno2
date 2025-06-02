@@ -104,19 +104,38 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
   }
 
   void _startMeasurement() {
+    if (_speedProvider.getCurrentSpeed() > 5.0) {
+      setState(() {
+        showMovementWarning = true;
+      });
+
+      Future.delayed(Duration(seconds: 3), () {
+        // Add this mounted check to prevent setState after dispose
+        if (mounted) {
+          setState(() {
+            showMovementWarning = false;
+          });
+        }
+      });
+      return;
+    }
+
     setState(() {
       isMeasurementActive = true;
       isMeasurementStarted = true;
       isTestButtonVisible = true;
       _waitingForSpeedToReachThreshold = false;
-      _isMeasurementFinished =
-          false; // Reset the flag when starting new measurement
+      _isMeasurementFinished = false;
     });
 
+    // Make sure all Future.delayed callbacks check mounted status
     Future.delayed(Duration(seconds: 3), () {
-      setState(() {
-        isMeasurementStarted = false;
-      });
+      // Add this mounted check
+      if (mounted) {
+        setState(() {
+          isMeasurementStarted = false;
+        });
+      }
     });
   }
 

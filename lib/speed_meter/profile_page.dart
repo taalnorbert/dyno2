@@ -398,7 +398,22 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _showDeleteConfirmationDialog(BuildContext context) {
+  void _showDeleteConfirmationDialog(BuildContext context) async {
+    // First check if user is signed in with Google
+    final bool isGoogleUser = await AuthService().isGoogleUser();
+
+    if (isGoogleUser) {
+      // Show Google user specific dialog without password field
+      _showGoogleUserDeleteConfirmationDialog(context);
+    } else {
+      // Show regular email/password user dialog
+      _showPasswordDeleteConfirmationDialog(context);
+    }
+  }
+
+  void _showGoogleUserDeleteConfirmationDialog(BuildContext context) {
+    bool isDialogActive = true;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -419,16 +434,70 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ],
           ),
-          content: Text(
-            AppLocalizations.deleteAccountConfirmation,
-            style: const TextStyle(color: Colors.white70, height: 1.5),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppLocalizations.deleteAccountConfirmation,
+                  style: const TextStyle(color: Colors.white70, height: 1.5),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.yellow.shade800.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.yellow.shade800),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          color: Colors.yellow.shade800, size: 24),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          AppLocalizations.googleAccountDeleteInfo,
+                          style: TextStyle(color: Colors.yellow.shade100),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade800.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.blue.shade800),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.login, color: Colors.blue.shade400, size: 24),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          AppLocalizations.googleReauthNeeded,
+                          style: TextStyle(color: Colors.blue.shade100),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
+              onPressed: () {
+                isDialogActive = false;
+                Navigator.of(dialogContext).pop();
+              },
               child: Text(
                 AppLocalizations.cancel,
                 style: const TextStyle(color: Colors.white70, fontSize: 16),
@@ -436,30 +505,55 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             ElevatedButton(
               onPressed: () async {
-                try {
-                  // Show loading indicator
-                  showDialog(
-                    context: dialogContext,
-                    barrierDismissible: false,
-                    builder: (context) => const Center(
-                      child: CircularProgressIndicator(color: Colors.red),
-                    ),
-                  );
+                // Show loading indicator
+                showDialog(
+                  context: dialogContext,
+                  barrierDismissible: false,
+                  builder: (context) => const Center(
+                    child: CircularProgressIndicator(color: Colors.red),
+                  ),
+                );
 
+                try {
+                  // Delete the account
                   await AuthService().deleteAccount();
 
-                  if (!dialogContext.mounted) return;
-                  Navigator.pop(dialogContext);
-                  Navigator.pop(dialogContext);
+                  // Mark dialog as inactive
+                  isDialogActive = false;
 
-                  if (!mounted) return;
-                  context.go('/login');
+                  // Close all dialogs
+                  if (dialogContext.mounted) {
+                    Navigator.pop(dialogContext); // Close loading indicator
+                    Navigator.pop(dialogContext); // Close main dialog
+                  }
+
+                  // Show success message before navigation
+                  if (mounted) {
+                    showTopMessage(
+                      AppLocalizations.accountDeletedSuccessfully,
+                      isSuccess: true,
+                    );
+
+                    // Navigate to login page after a brief delay
+                    Future.delayed(const Duration(milliseconds: 50), () {
+                      if (mounted) {
+                        context.go('/login');
+                      }
+                    });
+                  }
                 } catch (e) {
-                  if (!dialogContext.mounted) return;
+                  // Check if dialog is still active
+                  if (!isDialogActive || !dialogContext.mounted) return;
+
+                  // Close loading indicator if it's still showing
                   Navigator.pop(dialogContext);
 
-                  if (!mounted) return;
-                  showTopMessage('Hiba történt: ${e.toString()}');
+                  showTopMessage(
+                    AppLocalizations.errorWithMessage(
+                        e.toString().contains('Exception:')
+                            ? e.toString().split('Exception:')[1].trim()
+                            : e.toString()),
+                  );
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -470,7 +564,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 elevation: 3,
               ),
               child: Text(
-                AppLocalizations.deleteAccount,
+                AppLocalizations.confirmDelete,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -482,6 +576,257 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       },
     );
+  }
+
+  // Rename the existing method to _showPasswordDeleteConfirmationDialog
+  void _showPasswordDeleteConfirmationDialog(BuildContext context) {
+    // Create controller outside of showDialog to manage its lifecycle better
+    final passwordController = TextEditingController();
+    bool isPasswordVisible = false;
+    bool hasError = false;
+    String errorMessage = '';
+    bool isDialogActive = true;
+    bool isProcessing = false; // Add this flag to track ongoing operations
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(builder: (context, setState) {
+          return WillPopScope(
+            onWillPop: () async =>
+                !isProcessing, // Prevent back navigation during processing
+            child: AlertDialog(
+              backgroundColor: Colors.grey[900],
+              title: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded,
+                      color: Colors.red, size: 28),
+                  const SizedBox(width: 10),
+                  Text(
+                    AppLocalizations.deleteAccount,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLocalizations.deleteAccountConfirmation,
+                      style:
+                          const TextStyle(color: Colors.white70, height: 1.5),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      AppLocalizations.enterPasswordToConfirm,
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                    const SizedBox(height: 12),
+                    // Only show TextField if not processing to avoid disposal issues
+                    if (!isProcessing)
+                      TextField(
+                        controller: passwordController,
+                        obscureText: !isPasswordVisible,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.grey[850],
+                          hintText: AppLocalizations.password,
+                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(
+                              color: hasError ? Colors.red : Colors.white24,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(
+                              color: hasError ? Colors.red : Colors.red,
+                            ),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              isPasswordVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              color: Colors.grey,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                isPasswordVisible = !isPasswordVisible;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                    // Show processing indicator instead of TextField when processing
+                    if (isProcessing)
+                      Container(
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[850],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Center(
+                          child: CircularProgressIndicator(color: Colors.red),
+                        ),
+                      ),
+                    if (hasError && !isProcessing)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          errorMessage,
+                          style:
+                              const TextStyle(color: Colors.red, fontSize: 12),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isProcessing
+                      ? null
+                      : () {
+                          isDialogActive = false;
+                          Navigator.of(dialogContext).pop();
+                        },
+                  child: Text(
+                    AppLocalizations.cancel,
+                    style: TextStyle(
+                        color: isProcessing ? Colors.grey : Colors.white70,
+                        fontSize: 16),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: isProcessing
+                      ? null
+                      : () async {
+                          // Check if password field is empty
+                          if (passwordController.text.isEmpty) {
+                            setState(() {
+                              hasError = true;
+                              errorMessage = AppLocalizations.passwordRequired;
+                            });
+                            return;
+                          }
+
+                          // Store password value BEFORE starting processing
+                          final password = passwordController.text;
+
+                          // Mark as processing - this will hide the TextField
+                          setState(() {
+                            isProcessing = true;
+                            hasError = false;
+                          });
+
+                          try {
+                            // First verify the password
+                            final isPasswordValid =
+                                await AuthService().verifyPassword(password);
+
+                            // Check if dialog is still active
+                            if (!isDialogActive || !dialogContext.mounted) {
+                              return;
+                            }
+
+                            if (!isPasswordValid) {
+                              setState(() {
+                                hasError = true;
+                                errorMessage = AppLocalizations.wrongPassword;
+                                isProcessing =
+                                    false; // Reset processing to show TextField again
+                              });
+                              return;
+                            }
+
+                            // Password verified, now delete the account
+                            await AuthService().deleteAccount();
+
+                            // Mark dialog as inactive
+                            isDialogActive = false;
+
+                            // Close dialog
+                            if (dialogContext.mounted) {
+                              Navigator.of(dialogContext).pop();
+                            }
+
+                            // Show success message before navigation
+                            if (mounted) {
+                              showTopMessage(
+                                AppLocalizations.accountDeletedSuccessfully,
+                                isSuccess: true,
+                              );
+
+                              // Navigate to login page after a brief delay
+                              Future.delayed(const Duration(milliseconds: 1500),
+                                  () {
+                                if (mounted) {
+                                  context.go('/login');
+                                }
+                              });
+                            }
+                          } catch (e) {
+                            if (!isDialogActive || !dialogContext.mounted) {
+                              return;
+                            }
+
+                            setState(() {
+                              hasError = true;
+                              String errorMsg = e.toString();
+                              if (errorMsg.startsWith("Exception: ")) {
+                                errorMsg =
+                                    errorMsg.substring("Exception: ".length);
+                              }
+                              errorMessage = errorMsg;
+                              isProcessing =
+                                  false; // Reset processing to show TextField again
+                            });
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isProcessing ? Colors.grey : Colors.red,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 3,
+                  ),
+                  child: Text(
+                    AppLocalizations.deleteAccount,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        });
+      },
+    ).then((_) {
+      // Safely dispose the controller only when dialog is completely closed
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (!isProcessing) {
+          passwordController.dispose();
+        }
+      });
+    });
   }
 
   void _changePassword(BuildContext context) {

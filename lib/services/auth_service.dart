@@ -27,19 +27,72 @@ class AuthService {
         // Get user ID before deletion
         final String uid = user.uid;
 
-        // Delete all user data from Firestore
-        await FirebaseFirestore.instance.collection('users').doc(uid).delete();
+        // Check if this is a Google user
+        final isGoogleUser = user.providerData
+            .any((userInfo) => userInfo.providerId == 'google.com');
 
-        // Delete any other collections related to the user
-        // For example, if you have user-specific measurements or records
-        await _deleteUserRelatedData(uid);
+        // For Google users, we need a completely different approach
+        if (isGoogleUser) {
+          try {
+            // Sign out the current user first
+            await _auth.signOut();
 
-        // Finally delete the user account
-        await user.delete();
+            // Now prompt the user to sign in again with Google
+            final googleUser = await _googleSignIn.signIn();
+            if (googleUser == null) {
+              throw Exception(AppLocalizations.googleSignInCanceled);
+            }
+
+            final googleAuth = await googleUser.authentication;
+            final credential = GoogleAuthProvider.credential(
+              accessToken: googleAuth.accessToken,
+              idToken: googleAuth.idToken,
+            );
+
+            // Sign in again to get fresh credentials
+            final userCredential = await _auth.signInWithCredential(credential);
+            user = userCredential.user;
+
+            if (user == null) {
+              throw Exception("Failed to re-authenticate");
+            }
+
+            // Now we have a freshly authenticated user, proceed with deletion
+            await _deleteUserRelatedData(uid);
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(uid)
+                .delete();
+            await user.delete();
+          } finally {
+            // Always sign out from Google to clean up
+            await _googleSignIn.signOut();
+          }
+        } else {
+          // Regular email/password account deletion
+          // Delete all user-related data from collections
+          await _deleteUserRelatedData(uid);
+
+          // Delete the main user document from Firestore
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid)
+              .delete();
+
+          // Delete the Firebase Auth user
+          await user.delete();
+        }
       }
     } catch (e) {
-      logger.e('Account deletion error:',
+      logger.e('Error deleting account:',
           error: e, stackTrace: StackTrace.current);
+
+      // Make the error message more user-friendly
+      String errorMsg = e.toString();
+      if (errorMsg.contains('requires-recent-login')) {
+        throw Exception(AppLocalizations.accountDeletionAuthError);
+      }
+
       rethrow;
     }
   }
@@ -52,26 +105,40 @@ class AuthService {
         'measurements',
         'laptimes',
         'dynoResults',
+        'history', // If you have usage history
+        'preferences', // If you store user preferences separately
+        'favorites', // If users can mark favorites
+        'settings', // User settings
         // Add any other collections that store user data
       ];
 
       // Delete data from each collection
       for (String collection in collections) {
-        // Get all documents where userId matches
-        final querySnapshot = await FirebaseFirestore.instance
-            .collection(collection)
-            .where('userId', isEqualTo: uid)
-            .get();
+        try {
+          // Get all documents where userId matches
+          final querySnapshot = await FirebaseFirestore.instance
+              .collection(collection)
+              .where('userId', isEqualTo: uid)
+              .get();
 
-        // Delete each document
-        for (var doc in querySnapshot.docs) {
-          await doc.reference.delete();
+          // Delete each document
+          for (var doc in querySnapshot.docs) {
+            await doc.reference.delete();
+          }
+          logger.d(
+              'Deleted ${querySnapshot.docs.length} documents from $collection');
+        } catch (e) {
+          // Log error but continue with other collections
+          logger.w('Error deleting from $collection: $e');
         }
       }
+
+      logger.i('Successfully removed all user data for user $uid');
     } catch (e) {
       logger.e('Delete user data error:',
           error: e, stackTrace: StackTrace.current);
-      rethrow;
+      // Do not rethrow - we don't want account deletion to fail if some data remains
+      // Just log the error so you can manually clean up later if needed
     }
   }
 
@@ -123,7 +190,7 @@ class AuthService {
     showWarningMessage(context, message, color);
   }
 
-  Future<void> signup({
+  Future<bool> signup({
     required String email,
     required String password,
     required BuildContext context,
@@ -173,17 +240,18 @@ class AuthService {
 
       await FirebaseAuth.instance.signOut();
 
-      if (!context.mounted) return;
+      if (!context.mounted) return false;
       _showWarningMessageSafe(
         context,
         AppLocalizations.registrationSuccessVerifyEmail,
         Colors.green,
       );
 
-      if (!context.mounted) return;
+      if (!context.mounted) return false;
       context.go('/login');
+      return true;
     } on FirebaseAuthException catch (e) {
-      if (!context.mounted) return;
+      if (!context.mounted) return false;
       String message;
 
       switch (e.code) {
@@ -206,20 +274,29 @@ class AuthService {
           message = AppLocalizations.registrationError(e.message ?? '');
       }
       _showWarningMessageSafe(context, message, Colors.red);
+
+      // Don't rethrow, just return false to indicate failure
+      return false;
     } on SocketException {
-      if (!context.mounted) return;
+      if (!context.mounted) return false;
       _showWarningMessageSafe(
         context,
         AppLocalizations.noInternetConnection,
         Colors.red,
       );
+
+      // Don't rethrow, just return false
+      return false;
     } catch (e) {
-      if (!context.mounted) return;
+      if (!context.mounted) return false;
       _showWarningMessageSafe(
         context,
         AppLocalizations.errorWithMessage(e.toString()),
         Colors.red,
       );
+
+      // Don't rethrow, just return false
+      return false;
     }
   }
 
@@ -713,5 +790,14 @@ class AuthService {
     } catch (e) {
       throw 'Failed to update Instagram username: $e';
     }
+  }
+
+  Future<bool> isGoogleUser() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+
+    // Check if the user has a Google provider
+    return user.providerData
+        .any((userInfo) => userInfo.providerId == 'google.com');
   }
 }

@@ -1631,4 +1631,74 @@ class AppLocalizations {
       return "An error occurred";
     }
   }
+
+  static String get enterPasswordToConfirm {
+    if (_languageProvider.isHungarian) {
+      return "Add meg a jelszavad a törlés megerősítéséhez";
+    } else if (_languageProvider.isGerman) {
+      return "Geben Sie Ihr Passwort ein, um das Löschen zu bestätigen";
+    } else {
+      return "Enter your password to confirm deletion";
+    }
+  }
+
+  static String get passwordRequired {
+    if (_languageProvider.isHungarian) {
+      return "A jelszó megadása kötelező";
+    } else if (_languageProvider.isGerman) {
+      return "Passwort ist erforderlich";
+    } else {
+      return "Password is required";
+    }
+  }
+
+  static String get googleAccountDeleteInfo {
+    if (_languageProvider.isHungarian) {
+      return "Google fiókkal vagy bejelentkezve. A fiókod törlése után újra regisztrálhatsz, de minden adatod elvész.";
+    } else if (_languageProvider.isGerman) {
+      return "Du bist mit einem Google-Konto angemeldet. Nach dem Löschen deines Kontos kannst du dich erneut registrieren, aber alle deine Daten gehen verloren.";
+    } else {
+      return "You are signed in with a Google account. After deleting your account, you can register again, but all your data will be lost.";
+    }
+  }
+
+  static String get confirmDelete {
+    if (_languageProvider.isHungarian) {
+      return "Törlés megerősítése";
+    } else if (_languageProvider.isGerman) {
+      return "Löschen bestätigen";
+    } else {
+      return "Confirm Delete";
+    }
+  }
+
+  static String get accountDeletionAuthError {
+    if (_languageProvider.isHungarian) {
+      return "Újra be kell jelentkezned a fiók törléséhez. Kérlek, erősítsd meg a Google-fiókodat.";
+    } else if (_languageProvider.isGerman) {
+      return "Sie müssen sich erneut anmelden, um Ihr Konto zu löschen. Bitte bestätigen Sie Ihr Google-Konto.";
+    } else {
+      return "You need to sign in again to delete your account. Please confirm your Google account.";
+    }
+  }
+
+  static String get googleReauthNeeded {
+    if (_languageProvider.isHungarian) {
+      return "A megerősítéshez újra be kell jelentkezned a Google-fiókodba.";
+    } else if (_languageProvider.isGerman) {
+      return "Sie müssen sich erneut bei Ihrem Google-Konto anmelden, um dies zu bestätigen.";
+    } else {
+      return "You'll need to re-sign in to your Google account to confirm this.";
+    }
+  }
+
+  static String get accountDeletedSuccessfully {
+    if (_languageProvider.isHungarian) {
+      return "Fiók sikeresen törölve!";
+    } else if (_languageProvider.isGerman) {
+      return "Konto erfolgreich gelöscht!";
+    } else {
+      return "Account successfully deleted!";
+    }
+  }
 }

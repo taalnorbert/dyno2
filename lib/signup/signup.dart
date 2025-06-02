@@ -328,36 +328,24 @@ class _SignupState extends State<Signup> {
                         return;
                       }
 
-                      // Betöltési állapot beállítása
                       setState(() {
                         _isLoading = true;
                       });
 
-                      try {
-                        await AuthService().signup(
-                          email: _emailController.text,
-                          password: _passwordController.text,
-                          context: context,
-                        );
-                        // A sikeres regisztráció után a context.go() átnavigál,
-                        // így nem kell a betöltést kikapcsolni
-                      } catch (e) {
-                        // Hiba esetén megállítjuk a betöltést
-                        if (mounted) {
-                          setState(() {
-                            _isLoading = false;
-                          });
-                          // Itt lehetne hibaüzenetet megjeleníteni
-                          // ignore: use_build_context_synchronously
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  "${AppLocalizations.registrationFailed}: ${e.toString()}"),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
+                      // Call signup and handle the result
+                      bool success = await AuthService().signup(
+                        email: _emailController.text,
+                        password: _passwordController.text,
+                        context: context,
+                      );
+
+                      // Only handle loading state, no error messages
+                      if (!success && mounted) {
+                        setState(() {
+                          _isLoading = false;
+                        });
                       }
+                      // Navigation is already handled in the AuthService method
                     },
               child: Container(
                 decoration: BoxDecoration(

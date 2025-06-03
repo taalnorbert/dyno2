@@ -1753,4 +1753,146 @@ class AppLocalizations {
       return "You haven't made any measurements in this category yet.";
     }
   }
+
+  // Fuel Consumption - már létező, kiegészítve
+  static String get fuelConsumption {
+    if (_languageProvider.isHungarian) {
+      return "Fogyasztásszámító";
+    } else if (_languageProvider.isGerman) {
+      return "Verbrauchsrechner";
+    } else {
+      return "Fuel Calculator";
+    }
+  }
+
+  static String get distance {
+    if (_languageProvider.isHungarian) {
+      return "Távolság";
+    } else if (_languageProvider.isGerman) {
+      return "Entfernung";
+    } else {
+      return "Distance";
+    }
+  }
+
+  static String get fuel {
+    if (_languageProvider.isHungarian) {
+      return "Üzemanyag";
+    } else if (_languageProvider.isGerman) {
+      return "Kraftstoff";
+    } else {
+      return "Fuel";
+    }
+  }
+
+  // ÚJ LOKALIZÁCIÓK
+  static String get kilometers {
+    if (_languageProvider.isHungarian) {
+      return "km";
+    } else if (_languageProvider.isGerman) {
+      return "km";
+    } else {
+      return "km";
+    }
+  }
+
+  static String get miles {
+    if (_languageProvider.isHungarian) {
+      return "mérföld";
+    } else if (_languageProvider.isGerman) {
+      return "Meilen";
+    } else {
+      return "miles";
+    }
+  }
+
+  static String get liters {
+    if (_languageProvider.isHungarian) {
+      return "liter";
+    } else if (_languageProvider.isGerman) {
+      return "Liter";
+    } else {
+      return "liters";
+    }
+  }
+
+  static String get gallons {
+    if (_languageProvider.isHungarian) {
+      return "gallon";
+    } else if (_languageProvider.isGerman) {
+      return "Gallonen";
+    } else {
+      return "gallons";
+    }
+  }
+
+  static String get distanceTraveled {
+    if (_languageProvider.isHungarian) {
+      return "Megtett távolság";
+    } else if (_languageProvider.isGerman) {
+      return "Zurückgelegte Entfernung";
+    } else {
+      return "Distance Traveled";
+    }
+  }
+
+  static String get fuelConsumed {
+    if (_languageProvider.isHungarian) {
+      return "Elfogyasztott üzemanyag";
+    } else if (_languageProvider.isGerman) {
+      return "Verbrauchter Kraftstoff";
+    } else {
+      return "Fuel Consumed";
+    }
+  }
+
+  static String get calculate {
+    if (_languageProvider.isHungarian) {
+      return "SZÁMÍTÁS";
+    } else if (_languageProvider.isGerman) {
+      return "BERECHNEN";
+    } else {
+      return "CALCULATE";
+    }
+  }
+
+  static String get consumption {
+    if (_languageProvider.isHungarian) {
+      return "Fogyasztás:";
+    } else if (_languageProvider.isGerman) {
+      return "Verbrauch:";
+    } else {
+      return "Consumption:";
+    }
+  }
+
+  static String get enterValidValues {
+    if (_languageProvider.isHungarian) {
+      return "Kérjük, adjon meg érvényes értékeket";
+    } else if (_languageProvider.isGerman) {
+      return "Bitte geben Sie gültige Werte ein";
+    } else {
+      return "Please enter valid values";
+    }
+  }
+
+  static String get openFuelCalculator {
+    if (_languageProvider.isHungarian) {
+      return "Megnyitás";
+    } else if (_languageProvider.isGerman) {
+      return "Öffnen";
+    } else {
+      return "Open";
+    }
+  }
+
+  static String get help {
+    if (_languageProvider.isHungarian) {
+      return "Súgó";
+    } else if (_languageProvider.isGerman) {
+      return "Hilfe";
+    } else {
+      return "Help";
+    }
+  }
 }

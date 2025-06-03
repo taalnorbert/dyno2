@@ -603,7 +603,8 @@ class _DynoScreenState extends State<DynoScreen> {
                     // ignore: deprecated_member_use
                     border: Border.all(
                         // ignore: deprecated_member_use
-                        color: Colors.blue.withOpacity(0.3), width: 1),
+                        color: Colors.blue.withOpacity(0.3),
+                        width: 1),
                   ),
                   padding: const EdgeInsets.all(16),
                   child: Column(

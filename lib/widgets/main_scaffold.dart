@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/speed_provider.dart';
+import '../providers/language_provider.dart'; // Adjuk hozzá ezt az importot
 import '../speed_meter/widgets/Messages/warning_message.dart';
 import '../speed_meter/widgets/location_disabled_screen.dart';
 import '../localization/app_localizations.dart';
@@ -18,6 +19,7 @@ class MainScaffold extends StatefulWidget {
 
 class _MainScaffoldState extends State<MainScaffold> {
   final SpeedProvider _speedProvider = SpeedProvider();
+  final LanguageProvider _languageProvider = LanguageProvider(); // Új sor
   int bottomNavigationIndex = 2;
   bool showLowSpeedWarning = false;
   bool showHighSpeedWarning = false;
@@ -31,6 +33,25 @@ class _MainScaffoldState extends State<MainScaffold> {
     super.initState();
     _checkLocationPermission();
     _listenToPermissionChanges();
+
+    // Nyelvi változások figyelése
+    _languageProvider.addListener(_onLanguageChanged);
+  }
+
+  @override
+  void dispose() {
+    // Ne felejtsük el törölni a listenert
+    _languageProvider.removeListener(_onLanguageChanged);
+    super.dispose();
+  }
+
+  // Nyelvi változás esetén frissítjük a UI-t
+  void _onLanguageChanged() {
+    if (mounted) {
+      setState(() {
+        // Elég a setState hívás, nincs szükség további logikára
+      });
+    }
   }
 
   Future<void> _checkLocationPermission() async {

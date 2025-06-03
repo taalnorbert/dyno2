@@ -2,9 +2,10 @@
 
 import 'dart:async';
 import 'dart:math' show min, max, sqrt, cos, pi;
+
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 // LatLng osztály hozzáadása, amely nincs a kapott kódban
@@ -58,12 +59,21 @@ class _LapTimeScreenState extends State<LapTimeScreen>
   // Define the start/finish line as a vector
   LatLng? _startLinePoint1;
   LatLng? _startLinePoint2;
-
   // Add these fields
   StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
   StreamSubscription<GyroscopeEvent>? _gyroscopeSubscription;
   StreamSubscription<MagnetometerEvent>? _magnetometerSubscription;
   bool _isGpsAccurate = false;
+  // Sensor fusion fields for motion detection
+  bool _isDeviceStationary = true;
+  DateTime _lastMotionTime = DateTime.now();
+  final double _motionThreshold = 1.5; // m/s²
+  final Duration _stationaryTimeout = Duration(seconds: 2);
+  double _lastMagnetic = 0.0; // For magnetometer change detection
+
+  // Position history for better filtering when stationary
+  final List<LatLng> _recentPositions = [];
+  final int _maxRecentPositions = 10;
 
   @override
   void initState() {
@@ -179,16 +189,10 @@ class _LapTimeScreenState extends State<LapTimeScreen>
       setState(() {
         _isGpsAccurate = isAccurate;
       });
-
       LatLng newPosition = LatLng(position.latitude, position.longitude);
 
-      // Apply simple Kalman filtering if GPS is inaccurate
-      if (!isAccurate && _currentPosition != null) {
-        // Simple position smoothing - weight between last known position and new position
-        newPosition = LatLng(
-            _currentPosition!.latitude * 0.7 + newPosition.latitude * 0.3,
-            _currentPosition!.longitude * 0.7 + newPosition.longitude * 0.3);
-      }
+      // Apply advanced filtering based on GPS accuracy and device motion
+      newPosition = _applyAdvancedFiltering(newPosition, isAccurate);
 
       // Store previous position for line crossing detection
       LatLng? prevPosition = _currentPosition;
@@ -408,7 +412,6 @@ class _LapTimeScreenState extends State<LapTimeScreen>
     );
   }
 
-
   String _getStatusText() {
     if (_trackCompleted) {
       return "Pálya kész - Köridő követés aktív";
@@ -509,22 +512,162 @@ class _LapTimeScreenState extends State<LapTimeScreen>
     // Listen to accelerometer
     _accelerometerSubscription =
         accelerometerEvents.listen((AccelerometerEvent event) {
-      setState(() {
-      });
+      _updateAccelerometerData(event);
     });
 
     // Listen to gyroscope
     _gyroscopeSubscription = gyroscopeEvents.listen((GyroscopeEvent event) {
-      setState(() {
-      });
+      _updateGyroscopeData(event);
     });
 
     // Listen to magnetometer
     _magnetometerSubscription =
         magnetometerEvents.listen((MagnetometerEvent event) {
-      setState(() {
-      });
+      _updateMagnetometerData(event);
     });
+  }
+
+  void _updateAccelerometerData(AccelerometerEvent event) {
+    // Calculate total acceleration magnitude
+    double totalAccel =
+        sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
+
+    setState(() {
+    });
+
+    // Detect motion based on acceleration
+    _detectMotion(totalAccel);
+  }
+
+  void _updateGyroscopeData(GyroscopeEvent event) {
+    // Calculate total angular velocity magnitude
+    double totalAngularVel =
+        sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
+
+    // Add gyroscope data to motion detection
+    _detectMotion(
+        totalAngularVel * 5.0); // Scale gyroscope values for motion detection
+  }
+
+  void _updateMagnetometerData(MagnetometerEvent event) {
+    // Magnetometer can help detect device orientation changes
+    // For now, we'll use it for additional motion detection
+    double totalMagnetic =
+        sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
+
+    // Detect rapid changes in magnetic field (device movement)
+    double magneticChange = (totalMagnetic - _lastMagnetic).abs();
+    _lastMagnetic = totalMagnetic;
+
+    if (magneticChange > 10.0) {
+      // Threshold for magnetic field change
+      _detectMotion(magneticChange * 0.1); // Scale for motion detection
+    }
+  }
+
+  void _detectMotion(double motionValue) {
+    if (motionValue > _motionThreshold) {
+      setState(() {
+        _isDeviceStationary = false;
+        _lastMotionTime = DateTime.now();
+      });
+    } else {
+      // Check if device has been still for the timeout period
+      if (DateTime.now().difference(_lastMotionTime) > _stationaryTimeout) {
+        setState(() {
+          _isDeviceStationary = true;
+        });
+      }
+    }
+  }
+
+  LatLng _applyAdvancedFiltering(LatLng newPosition, bool isGpsAccurate) {
+    // Add current position to recent positions history
+    _recentPositions.add(newPosition);
+    if (_recentPositions.length > _maxRecentPositions) {
+      _recentPositions.removeAt(0);
+    }
+
+    // If we don't have a previous position, return the new position
+    if (_currentPosition == null) {
+      return newPosition;
+    }
+
+    // Calculate distance from current position
+    double distance = _calculateDistance(_currentPosition!, newPosition);
+
+    // Apply different filtering strategies based on motion state and GPS accuracy
+    if (_isDeviceStationary) {
+      // Device is stationary - apply heavy filtering to reduce GPS drift
+      return _applyStationaryFiltering(newPosition, distance, isGpsAccurate);
+    } else {
+      // Device is moving - apply lighter filtering to preserve movement accuracy
+      return _applyMovingFiltering(newPosition, distance, isGpsAccurate);
+    }
+  }
+
+  LatLng _applyStationaryFiltering(
+      LatLng newPosition, double distance, bool isGpsAccurate) {
+    // When stationary, heavily weight towards the average of recent positions
+    if (_recentPositions.length >= 3) {
+      // Calculate average of recent positions
+      double avgLat =
+          _recentPositions.map((pos) => pos.latitude).reduce((a, b) => a + b) /
+              _recentPositions.length;
+      double avgLon =
+          _recentPositions.map((pos) => pos.longitude).reduce((a, b) => a + b) /
+              _recentPositions.length;
+
+      LatLng avgPosition = LatLng(avgLat, avgLon);
+
+      // If GPS is inaccurate and device is stationary, heavily favor the average position
+      if (!isGpsAccurate) {
+        // Use 90% of average position, 10% of new GPS reading
+        return LatLng(
+          avgPosition.latitude * 0.9 + newPosition.latitude * 0.1,
+          avgPosition.longitude * 0.9 + newPosition.longitude * 0.1,
+        );
+      } else {
+        // GPS is accurate but device is stationary - moderate filtering
+        return LatLng(
+          avgPosition.latitude * 0.7 + newPosition.latitude * 0.3,
+          avgPosition.longitude * 0.7 + newPosition.longitude * 0.3,
+        );
+      }
+    }
+
+    // Fallback to simple filtering if not enough position history
+    return LatLng(
+      _currentPosition!.latitude * 0.8 + newPosition.latitude * 0.2,
+      _currentPosition!.longitude * 0.8 + newPosition.longitude * 0.2,
+    );
+  }
+
+  LatLng _applyMovingFiltering(
+      LatLng newPosition, double distance, bool isGpsAccurate) {
+    // When moving, use lighter filtering to preserve movement accuracy
+    if (!isGpsAccurate) {
+      // GPS is inaccurate but device is moving - moderate filtering
+      return LatLng(
+        _currentPosition!.latitude * 0.6 + newPosition.latitude * 0.4,
+        _currentPosition!.longitude * 0.6 + newPosition.longitude * 0.4,
+      );
+    } else {
+      // GPS is accurate and device is moving - minimal filtering
+      return LatLng(
+        _currentPosition!.latitude * 0.2 + newPosition.latitude * 0.8,
+        _currentPosition!.longitude * 0.2 + newPosition.longitude * 0.8,
+      );
+    }
+  }
+
+  double _calculateDistance(LatLng pos1, LatLng pos2) {
+    return Geolocator.distanceBetween(
+      pos1.latitude,
+      pos1.longitude,
+      pos2.latitude,
+      pos2.longitude,
+    );
   }
 
   @override
@@ -1223,17 +1366,15 @@ LatLng _createOffsetPoint(
 
 // Line crossing detection
 bool _hasLineCrossing(LatLng prevPosition, LatLng currentPosition) {
-  return _doLineSegmentsIntersect(
-      prevPosition, currentPosition, _startLinePoint1 as LatLng, _startLinePoint2 as LatLng);
+  return _doLineSegmentsIntersect(prevPosition, currentPosition,
+      _startLinePoint1 as LatLng, _startLinePoint2 as LatLng);
 }
 
 // ignore: camel_case_types
-class _startLinePoint2 {
-}
+class _startLinePoint2 {}
 
 // ignore: camel_case_types
-class _startLinePoint1 {
-}
+class _startLinePoint1 {}
 
 // Line intersection algorithm
 bool _doLineSegmentsIntersect(LatLng a, LatLng b, LatLng c, LatLng d) {

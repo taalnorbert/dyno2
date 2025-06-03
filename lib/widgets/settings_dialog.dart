@@ -5,6 +5,7 @@ import '../providers/speed_provider.dart';
 import '../providers/language_provider.dart';
 import '../localization/app_localizations.dart';
 import '../speed_meter/widgets/Messages/help_dialog.dart';
+import './fuel_consumption_dialog.dart'; // ÚJ IMPORT
 
 class SettingsDialog extends StatelessWidget {
   final SpeedProvider speedProvider;
@@ -270,7 +271,47 @@ class SettingsDialog extends StatelessWidget {
 
                         SizedBox(height: 12),
 
-                        // Information Button
+                        // Fuel Consumption Setting - ÚJ FUNKCIÓ
+                        _buildCompactSettingTile(
+                          icon: Icons.local_gas_station,
+                          title: AppLocalizations.fuelConsumption,
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[800],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.red.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.of(context)
+                                    .pop(); // Bezárjuk az aktuális dialógust
+                                _showFuelConsumptionDialog(context);
+                              },
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.calculate,
+                                      color: Colors.red, size: 14),
+                                  SizedBox(width: 6),
+                                  Text(AppLocalizations.openFuelCalculator,
+                                      style: TextStyle(
+                                          color: Colors.white, fontSize: 14)),
+                                  Icon(Icons.arrow_forward_ios,
+                                      color: Colors.grey, size: 12),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(height: 12),
+
+                        // Information Button - ÁTMOZGATVA IDE AZ ALJÁRA
                         _buildCompactSettingTile(
                           icon: Icons.info_outline,
                           title: AppLocalizations.information,
@@ -312,7 +353,7 @@ class SettingsDialog extends StatelessWidget {
                                       ),
                                       SizedBox(width: 6),
                                       Text(
-                                        'Súgó',
+                                        AppLocalizations.help, // LOKALIZÁLVA
                                         style: TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.w600,
@@ -326,6 +367,8 @@ class SettingsDialog extends StatelessWidget {
                             ),
                           ),
                         ),
+
+                        SizedBox(height: 12),
                       ],
                     ),
                   ),
@@ -382,6 +425,13 @@ class SettingsDialog extends StatelessWidget {
           child,
         ],
       ),
+    );
+  }
+
+  void _showFuelConsumptionDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => FuelConsumptionDialog(),
     );
   }
 }

@@ -18,7 +18,8 @@ class HundredToTwoHundred extends StatefulWidget {
   State<HundredToTwoHundred> createState() => _HundredToTwoHundredState();
 }
 
-class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
+class _HundredToTwoHundredState extends State<HundredToTwoHundred>
+    with SingleTickerProviderStateMixin {
   final SpeedProvider _speedProvider = SpeedProvider();
 
   bool isLocationServiceEnabled = true;
@@ -34,16 +35,36 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
   StreamSubscription<ServiceStatus>? _serviceStatusSubscription;
   bool _isMeasurementFinished = false;
 
+  // Animation variables
+  bool _isSpeedometerExpanded = false;
+  late AnimationController _messageAnimationController;
+  late Animation<Offset> _messageSlideAnimation;
+
   @override
   void initState() {
     super.initState();
     _checkPermissionsAndStartListening();
     _listenToLocationServiceStatus();
 
+    // Initialize animation controller for message
+    _messageAnimationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 400),
+    );
+
+    // Create slide animation that moves from top (-1.0) to its normal position (0.0)
+    _messageSlideAnimation = Tween<Offset>(
+      begin: Offset(0.0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _messageAnimationController,
+      curve: Curves.easeOut,
+    ));
+
     // Add listener to SpeedProvider to get updates
     _speedProvider.addListener(_onSpeedChanged);
 
-    // Indítsa el automatikusan a mérést, amikor betöltődik az oldal
+    // Start measurement automatically when page loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startMeasurement();
     });
@@ -127,9 +148,12 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
       isMeasurementStarted = true;
       isTestButtonVisible = true;
       _waitingForSpeedToReachThreshold = false;
-      _isMeasurementFinished =
-          false; // Reset flag when starting new measurement
+      _isMeasurementFinished = false;
+      _isSpeedometerExpanded = true; // Trigger speedometer animation
     });
+
+    // Start the message slide animation
+    _messageAnimationController.forward();
 
     // Hide "Measurement started" message after 3 seconds
     Future.delayed(Duration(seconds: 3), () {
@@ -219,11 +243,13 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
       isMeasurementStarted = false;
       isTestButtonVisible = false;
       _waitingForSpeedToReachThreshold = false;
-      _isMeasurementFinished = false; // Reset the flag
+      _isMeasurementFinished = false;
+      _isSpeedometerExpanded = false; // Reset speedometer size
     });
 
     _measurementTimer?.cancel();
     _measurementTimer = null;
+    _messageAnimationController.reset();
 
     // Visszamegy az előző oldalra
     if (mounted) {
@@ -253,6 +279,7 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
     _measurementTimer?.cancel();
     _serviceStatusSubscription?.cancel();
     _speedProvider.removeListener(_onSpeedChanged);
+    _messageAnimationController.dispose(); // Dispose animation controller
     super.dispose();
   }
 
@@ -262,17 +289,27 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
       backgroundColor: Colors.black,
       body: Center(
         child: Stack(
+          alignment: Alignment.center, // Center all children in the stack
           children: [
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                AnimatedContainer(
-                  duration: Duration(milliseconds: 300),
-                  width: MediaQuery.sizeOf(context).width * 1,
-                  height: MediaQuery.sizeOf(context).width * 1,
-                  child: CustomPaint(
-                    painter: MeterPainter(_speedProvider.getCurrentSpeed(),
-                        isKmh: _speedProvider.isKmh),
+                // Use AnimatedScale for proper proportional scaling
+                AnimatedScale(
+                  scale: _isSpeedometerExpanded
+                      ? 1.1
+                      : 1.0, // 10% larger when expanded
+                  duration: Duration(milliseconds: 600),
+                  curve: Curves.easeInOut,
+                  child: SizedBox(
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.width, // Keep it square
+                    child: CustomPaint(
+                      painter: MeterPainter(
+                        _speedProvider.getCurrentSpeed(),
+                        isKmh: _speedProvider.isKmh,
+                      ),
+                    ),
                   ),
                 ),
                 if (isMeasurementActive) ...[
@@ -290,12 +327,23 @@ class _HundredToTwoHundredState extends State<HundredToTwoHundred> {
                 ],
               ],
             ),
+            // Position the message at the top with proper centering
             if (isMeasurementStarted)
-              SuccessMessage(
-                message: AppLocalizations.measurementStarted,
-                icon: Icons.check,
-                color: Color(0xFF0ca644),
-                iconColor: Color(0xFF84D65A),
+              Positioned(
+                top: 50, // Adjust this value as needed for proper positioning
+                left: 0,
+                right: 0,
+                child: SlideTransition(
+                  position: _messageSlideAnimation,
+                  child: Center(
+                    child: SuccessMessage(
+                      message: AppLocalizations.measurementStarted,
+                      icon: Icons.check,
+                      color: Color(0xFF0ca644),
+                      iconColor: Color(0xFF84D65A),
+                    ),
+                  ),
+                ),
               ),
             if (showMovementWarning)
               WarningMessage(

@@ -18,7 +18,8 @@ class ZeroToHundred extends StatefulWidget {
   State<ZeroToHundred> createState() => _ZeroToHundredState();
 }
 
-class _ZeroToHundredState extends State<ZeroToHundred> {
+class _ZeroToHundredState extends State<ZeroToHundred>
+    with SingleTickerProviderStateMixin {
   // Use the SpeedProvider instance
   final SpeedProvider _speedProvider = SpeedProvider();
 
@@ -31,7 +32,12 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
   DateTime? _startTime;
   Timer? _measurementTimer;
   bool _waitingForSpeedToReachThreshold = false;
-  bool _isMeasurementFinished = false; // Add this flag
+  bool _isMeasurementFinished = false;
+  bool _isSpeedometerExpanded =
+      false; // New variable for speedometer size animation
+
+  late AnimationController _messageAnimationController;
+  late Animation<Offset> _messageSlideAnimation;
 
   @override
   void initState() {
@@ -39,10 +45,25 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
     _checkPermissionsAndStartListening();
     _listenToLocationServiceStatus();
 
+    // Initialize animation controller for message
+    _messageAnimationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 400),
+    );
+
+    // Create slide animation that moves from top (-1.0) to its normal position (0.0)
+    _messageSlideAnimation = Tween<Offset>(
+      begin: Offset(0.0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _messageAnimationController,
+      curve: Curves.easeOut,
+    ));
+
     // Add listener to SpeedProvider to get updates
     _speedProvider.addListener(_onSpeedChanged);
 
-    // Indítsa el automatikusan a mérést, amikor betöltődik az oldal
+    // Start measurement automatically when page loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startMeasurement();
     });
@@ -110,7 +131,6 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
       });
 
       Future.delayed(Duration(seconds: 3), () {
-        // Add this mounted check to prevent setState after dispose
         if (mounted) {
           setState(() {
             showMovementWarning = false;
@@ -126,11 +146,14 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
       isTestButtonVisible = true;
       _waitingForSpeedToReachThreshold = false;
       _isMeasurementFinished = false;
+      _isSpeedometerExpanded = true; // Trigger speedometer animation
     });
+
+    // Start the message slide animation
+    _messageAnimationController.forward();
 
     // Make sure all Future.delayed callbacks check mounted status
     Future.delayed(Duration(seconds: 3), () {
-      // Add this mounted check
       if (mounted) {
         setState(() {
           isMeasurementStarted = false;
@@ -217,15 +240,17 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
       isMeasurementStarted = false;
       isTestButtonVisible = false;
       _waitingForSpeedToReachThreshold = false;
-      _isMeasurementFinished = false; // Reset the flag
+      _isMeasurementFinished = false;
+      _isSpeedometerExpanded = false; // Reset speedometer size
     });
 
     _measurementTimer?.cancel();
     _measurementTimer = null;
+    _messageAnimationController.reset();
 
     // Replace Navigator.pop with context.pop
     if (mounted) {
-      context.pop(); // Visszamegy az előző oldalra go_router helyett
+      context.pop();
     }
   }
 
@@ -250,6 +275,7 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
     _speedIncreaseTimer?.cancel();
     _measurementTimer?.cancel();
     _speedProvider.removeListener(_onSpeedChanged);
+    _messageAnimationController.dispose();
     super.dispose();
   }
 
@@ -259,18 +285,27 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
       backgroundColor: Colors.black,
       body: Center(
         child: Stack(
+          alignment: Alignment.center, // Center all children in the stack
           children: [
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                AnimatedContainer(
-                  duration: Duration(milliseconds: 300),
-                  width: MediaQuery.sizeOf(context).width * 1,
-                  height: MediaQuery.sizeOf(context).width * 1,
-                  child: CustomPaint(
-                    painter: MeterPainter(
+                // Use AnimatedScale instead of AnimatedContainer for proper proportional scaling
+                AnimatedScale(
+                  scale: _isSpeedometerExpanded
+                      ? 1.1
+                      : 1.0, // 10% larger when expanded
+                  duration: Duration(milliseconds: 600),
+                  curve: Curves.easeInOut,
+                  child: SizedBox(
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.width, // Keep it square
+                    child: CustomPaint(
+                      painter: MeterPainter(
                         _getSpeedInCurrentUnit(_speedProvider.currentSpeed),
-                        isKmh: _speedProvider.isKmh),
+                        isKmh: _speedProvider.isKmh,
+                      ),
+                    ),
                   ),
                 ),
                 if (isMeasurementActive) ...[
@@ -288,19 +323,39 @@ class _ZeroToHundredState extends State<ZeroToHundred> {
                 ],
               ],
             ),
+            // Position the message at the top with proper centering
             if (isMeasurementStarted)
-              SuccessMessage(
-                message: AppLocalizations.measurementStarted,
-                icon: Icons.check,
-                color: Color(0xFF0ca644),
-                iconColor: Color(0xFF84D65A),
+              Positioned(
+                top: 50, // Adjust this value as needed for proper positioning
+                left: 0,
+                right: 0,
+                child: SlideTransition(
+                  position: _messageSlideAnimation,
+                  child: Center(
+                    // Center horizontally
+                    child: SuccessMessage(
+                      message: AppLocalizations.measurementStarted,
+                      icon: Icons.check,
+                      color: Color(0xFF0ca644),
+                      iconColor: Color(0xFF84D65A),
+                    ),
+                  ),
+                ),
               ),
             if (showMovementWarning)
-              WarningMessage(
-                message: AppLocalizations.vehicleIsMoving,
-                icon: Icons.warning,
-                color: Colors.orange,
-                iconColor: Colors.white,
+              Positioned(
+                top: 50, // Match the same positioning as the success message
+                left: 0,
+                right: 0,
+                child: Center(
+                  // Center horizontally
+                  child: WarningMessage(
+                    message: AppLocalizations.vehicleIsMoving,
+                    icon: Icons.warning,
+                    color: Colors.orange,
+                    iconColor: Colors.white,
+                  ),
+                ),
               ),
           ],
         ),

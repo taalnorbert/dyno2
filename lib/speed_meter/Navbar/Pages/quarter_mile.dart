@@ -18,7 +18,8 @@ class QuarterMile extends StatefulWidget {
   State<QuarterMile> createState() => _QuarterMileState();
 }
 
-class _QuarterMileState extends State<QuarterMile> {
+class _QuarterMileState extends State<QuarterMile>
+    with SingleTickerProviderStateMixin {
   final SpeedProvider _speedProvider = SpeedProvider();
   double _distanceTraveled = 0.0;
   Position? _lastPosition;
@@ -34,6 +35,11 @@ class _QuarterMileState extends State<QuarterMile> {
   StreamSubscription<Position>? _positionStreamSubscription;
   Timer? _speedIncreaseTimer; // Új Timer a sebesség növeléséhez
 
+  // Animation variables
+  bool _isSpeedometerExpanded = false;
+  late AnimationController _messageAnimationController;
+  late Animation<Offset> _messageSlideAnimation;
+
   // Get quarter mile distance based on unit
   double get quarterMileDistance => _speedProvider.isKmh ? 0.402336 : 0.25;
 
@@ -41,6 +47,22 @@ class _QuarterMileState extends State<QuarterMile> {
   void initState() {
     super.initState();
     _checkPermissionsAndStartListening();
+
+    // Initialize animation controller for message
+    _messageAnimationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 400),
+    );
+
+    // Create slide animation that moves from top (-1.0) to its normal position (0.0)
+    _messageSlideAnimation = Tween<Offset>(
+      begin: Offset(0.0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _messageAnimationController,
+      curve: Curves.easeOut,
+    ));
+
     _speedProvider.addListener(_onSpeedChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startMeasurement();
@@ -135,12 +157,16 @@ class _QuarterMileState extends State<QuarterMile> {
     setState(() {
       isMeasurementActive = true;
       isMeasurementStarted = true;
-      isTestButtonVisible = true; // Bekapcsoljuk a teszt gombot
+      isTestButtonVisible = true;
       _measurementTimerStarted = false;
       _distanceTraveled = 0.0;
       _startTime = null;
       _isMeasurementFinished = false;
+      _isSpeedometerExpanded = true; // Trigger speedometer animation
     });
+
+    // Start the message slide animation
+    _messageAnimationController.forward();
 
     // Hide "Measurement started" message after 3 seconds
     Future.delayed(Duration(seconds: 3), () {
@@ -251,8 +277,11 @@ class _QuarterMileState extends State<QuarterMile> {
       _distanceTraveled = 0.0;
       _lastPosition = null;
       _startTime = null;
-      _isMeasurementFinished = false; // Reset the flag
+      _isMeasurementFinished = false;
+      _isSpeedometerExpanded = false; // Reset speedometer size
     });
+
+    _messageAnimationController.reset();
 
     if (mounted) {
       context.pop(); // Visszamegy az előző oldalra
@@ -263,7 +292,8 @@ class _QuarterMileState extends State<QuarterMile> {
   void dispose() {
     _positionStreamSubscription?.cancel();
     _speedProvider.removeListener(_onSpeedChanged);
-    _speedIncreaseTimer?.cancel(); // Ne felejtsük el törölni a timert
+    _speedIncreaseTimer?.cancel();
+    _messageAnimationController.dispose(); // Dispose animation controller
     super.dispose();
   }
 
@@ -273,18 +303,26 @@ class _QuarterMileState extends State<QuarterMile> {
       backgroundColor: Colors.black,
       body: Center(
         child: Stack(
+          alignment: Alignment.center, // Center all children in the stack
           children: [
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                AnimatedContainer(
-                  duration: Duration(milliseconds: 300),
-                  width: MediaQuery.sizeOf(context).width * 1,
-                  height: MediaQuery.sizeOf(context).width * 1,
-                  child: CustomPaint(
-                    painter: MeterPainter(
-                      _speedProvider.getCurrentSpeed(),
-                      isKmh: _speedProvider.isKmh,
+                // Use AnimatedScale for proper proportional scaling
+                AnimatedScale(
+                  scale: _isSpeedometerExpanded
+                      ? 1.1
+                      : 1.0, // 10% larger when expanded
+                  duration: Duration(milliseconds: 600),
+                  curve: Curves.easeInOut,
+                  child: SizedBox(
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.width, // Keep it square
+                    child: CustomPaint(
+                      painter: MeterPainter(
+                        _speedProvider.getCurrentSpeed(),
+                        isKmh: _speedProvider.isKmh,
+                      ),
                     ),
                   ),
                 ),
@@ -304,12 +342,23 @@ class _QuarterMileState extends State<QuarterMile> {
                 ],
               ],
             ),
+            // Position the message at the top with proper centering
             if (isMeasurementStarted)
-              SuccessMessage(
-                message: AppLocalizations.measurementStarted,
-                icon: Icons.check,
-                color: Color(0xFF0ca644),
-                iconColor: Color(0xFF84D65A),
+              Positioned(
+                top: 50,
+                left: 0,
+                right: 0,
+                child: SlideTransition(
+                  position: _messageSlideAnimation,
+                  child: Center(
+                    child: SuccessMessage(
+                      message: AppLocalizations.measurementStarted,
+                      icon: Icons.check,
+                      color: Color(0xFF0ca644),
+                      iconColor: Color(0xFF84D65A),
+                    ),
+                  ),
+                ),
               ),
             if (showMovementWarning)
               WarningMessage(

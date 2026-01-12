@@ -203,40 +203,22 @@ class AuthService {
         password: password,
       );
 
+      // Store the UID before signing out
+      final uid = userCredential.user!.uid;
+
       // Store registration time and user data in Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .set({
+      // expiresAt is used by Firestore TTL Policy to automatically delete unverified users after 24 hours
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'email': email,
         'registrationTime': FieldValue.serverTimestamp(),
         'isVerified': false,
+        'expiresAt': Timestamp.fromDate(
+          DateTime.now().add(const Duration(hours: 24)),
+        ),
       });
 
       // Send verification email
       await userCredential.user?.sendEmailVerification();
-
-      // Schedule deletion after 24 hours if not verified
-      Future.delayed(const Duration(hours: 24), () async {
-        // Check if user exists and is still not verified
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null && !user.emailVerified) {
-          // Get user data from Firestore
-          final userData = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .get();
-
-          // Delete user if still not verified
-          if (userData.exists && userData.data()?['isVerified'] == false) {
-            await user.delete();
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .delete();
-          }
-        }
-      });
 
       await FirebaseAuth.instance.signOut();
 
@@ -302,10 +284,11 @@ class AuthService {
 
   // Add method to mark user as verified when they verify their email
   Future<void> _markUserAsVerified(String uid) async {
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .update({'isVerified': true});
+    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      'isVerified': true,
+      'expiresAt':
+          FieldValue.delete(), // Remove TTL field since user is now verified
+    });
   }
 
   // Add method to check email verification status

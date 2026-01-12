@@ -58,11 +58,18 @@ class _LoginState extends State<Login> {
     });
 
     try {
-      await AuthService().signin(
+      final success = await AuthService().signin(
         email: _emailController.text,
         password: _passwordController.text,
         context: context,
       );
+
+      // Ha nem sikerült a bejelentkezés (pl. nincs megerősítve az email)
+      if (!success) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
       // Sikeres bejelentkezés esetén a StreamBuilder automatikusan átirányít
     } catch (e) {
       // Explicit módon állítsuk le a betöltést és mutassuk a hibaüzenetet

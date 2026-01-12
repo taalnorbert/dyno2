@@ -368,16 +368,19 @@ class AuthService {
             logger.i('User ${user.email} marked as verified in Firestore');
           }
         }
-        // If email is not verified, show warning
+        // If email is not verified, prevent login
         else {
+          // Sign out the user immediately
+          await _auth.signOut();
+
           if (!context.mounted) return false;
           _showWarningMessageSafe(
-              context, AppLocalizations.pleaseVerifyEmail, Colors.orange);
-          // You might want to show a dialog to resend verification here
+              context, AppLocalizations.pleaseVerifyEmail, Colors.red);
+          return false;
         }
       }
 
-      // Redirect to home page if everything is successful
+      // Email is verified, redirect to home page
       if (!context.mounted) return false;
       context.go('/home');
       return true;
